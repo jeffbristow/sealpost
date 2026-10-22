@@ -1,0 +1,7 @@
+{
+  "version": "1.10.0",
+  "url": "https://github.com/jeffbristow/sealpost/releases/download/server-v1.10.0/Sealpost-Web-Server-1.10.0.zip",
+  "sha256": "5f9bed58f05fcd165fb80a4aa162802be8cbd58a78e4f3dd11b073773f6fb8fe",
+  "size": "485 KB",
+  "note": "One-click updates: Sealpost Web tells you about new server versions and installs them (signed packages only)."
+}
