@@ -11,7 +11,7 @@
   "license": "GPL-3.0-only",
   "scripts": {
     "start": "electron .",
-    "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js",
+    "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js && node test/server-update-test.js",
     "dist": "electron-builder --win nsis --x64 --publish never",
     "dist:portable": "electron-builder --win portable --x64 --publish never",
     "update-file": "node build/make-update.js",

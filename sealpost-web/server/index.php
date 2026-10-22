@@ -117,6 +117,7 @@ $v = SEALPOST_SERVER_VERSION;
       <span>Sealpost <span class="brand-web">Web</span></span>
       <button id="btnCloseNav" class="icon-btn mobile-only" title="Close">✕</button>
     </div>
+    <div id="updateNote" class="update-note hidden"></div>
     <button id="btnCompose" class="btn primary compose-btn">✎ New message</button>
     <nav id="accountTree" class="account-tree" aria-label="Folders"></nav>
     <div class="nav-bottom">
@@ -289,6 +290,8 @@ $v = SEALPOST_SERVER_VERSION;
         <div class="row-btns"><button id="stImportBackup" class="btn" type="button">Choose backup file…</button></div>
         <h3>This device</h3>
         <div id="stDevice"></div>
+        <h3>Server updates</h3>
+        <div id="stUpdate"></div>
         <h3>About</h3>
         <p class="small">Sealpost Web <?= htmlspecialchars($v) ?> · <a href="status.php" target="_blank" rel="noopener">Server status</a></p>
       </div>

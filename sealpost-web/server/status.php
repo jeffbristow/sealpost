@@ -33,6 +33,11 @@ $checks[] = ['Secure connection (HTTPS)', $https, $https ? 'Yes' : 'No — open 
 $checks[] = ['Vault storage', $storageOk, $storageOk ? 'Ready (outside the public web folder)' : 'Not writable — check data_dir in config.php'];
 $checks[] = ['PHP ' . PHP_VERSION, version_compare(PHP_VERSION, '8.1', '>='), version_compare(PHP_VERSION, '8.1', '>=') ? 'OK' : 'PHP 8.1 or newer is needed'];
 $checks[] = ['Vault', true, $hasVault ? 'Created' : (trim((string) cfg('setup_code')) !== '' ? 'Not created yet — create it from Sealpost' : 'Not created (setup is switched off in config.php)')];
+// 1.10.0: one-click updates (only what's already known — this page never asks GitHub)
+$upBad = up_blockers();
+$upNew = $storageOk ? up_available() : null;
+$checks[] = ['One-click updates', !$upBad, $upBad ? 'Not possible here: ' . implode('; ', $upBad) . ' — upload new versions by hand'
+    : ($upNew ? 'Version ' . $upNew['version'] . ' is available — Sealpost Web → Settings → Server updates' : 'Ready (Sealpost Web → Settings → Server updates)')];
 
 // the address to type into Sealpost: this folder's URL
 $scheme = $https ? 'https' : 'http';

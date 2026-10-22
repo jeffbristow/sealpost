@@ -1,4 +1,4 @@
-SEALPOST SERVER 1.9.2  —  Sync + Sealpost Web + iPhone app
+SEALPOST SERVER 1.10.0  —  Sync + Sealpost Web + iPhone app
 ======================================================================
 
 What's in it
@@ -24,6 +24,7 @@ Files
   imap.php     the mail-server (IMAP) connection code
   smtp.php     sends finished messages through your SMTP server (1.2.0)
   keys.php     finds people's public keys online / publishes yours (1.4.0)
+  update.php   one-click server updates (1.10.0)
   manifest.webmanifest  name + icons for the home-screen app (1.5.0)
   web/faceid.js  Face ID unlock (1.6.0)
   sw.js        lets the home-screen app start quickly; keeps only the
@@ -180,8 +181,27 @@ New in 1.9.0 — iPhone layout reworked (Apple's guidelines)
   "black"). iPhone: remove the Sealpost icon and add it to the Home Screen
   again once, then sign in and set up PIN / Face ID again.
 
+New in 1.10.0 — one-click updates
+  - When a newer Sealpost Server is out, Sealpost Web says so after you
+    sign in (a card at the top of the menu). Click Update now — or use
+    Settings -> Server updates (Check now / Update now / Undo).
+  - Updates come only from Sealpost's GitHub page, and are installed only
+    if they carry Sealpost's signature (your server holds the public key
+    to check it). A damaged or changed package is refused and nothing is
+    touched.
+  - Never changed: config.php, your vault (sealpost-data), and any of
+    your own files that aren't part of Sealpost. The files that are
+    replaced are backed up first; if anything can't be written, the old
+    version is put back by itself. Undo returns to the previous version.
+  - Your server checks GitHub at most every 12 hours, and only for the
+    version number. It needs PHP's curl, zip and sodium (status.php shows
+    "One-click updates: Ready").
+  - This one version (1.10.0) has to be uploaded by hand. Updates after it
+    are one click.
+  - Also: status.php has a "One-click updates" line.
+
 Quick test after updating (5 minutes)
-  [ ] status.php shows all green and "Server version 1.9.2"
+  [ ] status.php shows all green and "Server version 1.10.0"
   [ ] Sign in; Settings -> Mail accounts -> Edit -> Test connection
       says "Receiving and sending both work"
   [ ] Keys -> Find online… -> your own address finds your key (if you

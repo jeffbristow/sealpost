@@ -4,7 +4,7 @@
  * Lets Sealpost start like an app from the iPhone home screen, even on
  * a weak connection. It keeps ONLY the app itself (page, scripts,
  * styles, icons) — never your mail, your vault or anything from
- * api.php / mail.php / keys.php. Those always go straight to the server.
+ * api.php / mail.php / keys.php / update.php. Those always go straight to the server.
  *
  * Strategy: always try the network first (so updates show up at once);
  * use the saved copy only when the network can't be reached.
@@ -18,13 +18,13 @@
 /* =================================================================
  * 1. WHAT MAY BE KEPT
  * ================================================================= */
-const CACHE = 'sealpost-shell-1.9.2';
+const CACHE = 'sealpost-shell-1.10.0';
 const SHELL = ['./', 'manifest.webmanifest', 'web/icon.png', 'web/icons/apple-touch-icon.png'];
 
 function mayKeep(url, request) {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return false;
   const p = url.pathname;
-  if (/\/(api|mail|keys|status)\.php$/i.test(p)) return false;       // private data: never
+  if (/\/(api|mail|keys|status|update)\.php$/i.test(p)) return false;   // private data: never (update.php: 1.10.0)
   if (request.mode === 'navigate') return true;                        // the page itself
   return /\/web\/.+\.(js|css|png|svg|woff2?)$/i.test(p) || /manifest\.webmanifest$/.test(p);
 }

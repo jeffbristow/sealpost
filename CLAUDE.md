@@ -9,7 +9,7 @@ A PGP email system with two halves that share one encrypted "vault":
 | Part | Folder | Tech | Current version |
 |------|--------|------|-----------------|
 | **Sealpost** — desktop IMAP/SMTP client (Windows 11; Linux builds too) | `sealpost/` | Electron 44, Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.10.0) |
-| **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.9.2) |
+| **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.10.0) |
 
 The two version numbers are independent. Features that need both say so
 (e.g. "pinned folders sync with Windows 1.10.0 and later").
@@ -53,17 +53,22 @@ sealpost-web/
     mail.php               browser → IMAP/SMTP bridge; credentials come with each request
     imap.php / smtp.php    self-contained IMAP and SMTP clients (raw sockets)
     keys.php               WKD + keys.openpgp.org lookup/publish for the browser (public keys only)
-    lib.php                config, SQLite vault, validation, rate limits, device tokens
+    update.php             one-click server updates: status / check / install / undo (1.10.0)
+    lib.php                config, SQLite vault, validation, rate limits, device tokens,
+                           section 8 = the updater (signed packages from GitHub)
     status.php             server status page
     config.example.php     template — copy to config.php (the real one is git-ignored)
     sw.js, manifest.webmanifest   iPhone home-screen app shell
     web/                   browser app: app.js (main screen), vault.js (sync crypto),
                            pgp.js, reader.js, compose.js, composer.js, people.js,
-                           settings.js, tools.js, ui.js, faceid.js, vendor/ (openpgp, postal-mime)
+                           settings.js, tools.js, ui.js, faceid.js, update.js (1.10.0),
+                           vendor/ (openpgp, postal-mime)
     README.txt             user-facing server README + full server changelog
   sealpost-check.php       standalone "can my host run this?" checker (upload alone)
-  devtest/                 dev scripts from the claude.ai sandbox (Dovecot fixtures, fake SMTP,
-                           stamp.sh) — hard-coded /home/claude paths; not runnable as-is
+  tools/release-server.js  packages + signs a server release, writes server-update.json
+  devtest/                 stamp.sh (works on Windows since 1.10.0) + dev scripts from the
+                           claude.ai sandbox (hard-coded /home/claude paths; not runnable as-is)
+server-update.json         what installed servers read to find the newest server version
 ```
 
 ## How it works
@@ -164,8 +169,23 @@ pass counts show up.
   holding the Windows installer, the `.sealpost` update file, the Linux
   `.deb` + AppImage, and `Sealpost-Web-Server-<server version>.zip` (built with
   `git archive` from `sealpost-web/server`, so it never contains `config.php`).
-- **Server/web:** upload the changed files to the website folder. `status.php`
-  should show all green and the new server version.
+- **Server/web — one-click updates (1.10.0+):** installed servers read
+  `server-update.json` (raw.githubusercontent.com, `main`) and install only zips
+  signed with the Sealpost update key (Ed25519; public half = `UPDATE_PUBKEY` in
+  `lib.php`; private half = `~/.sealpost/update-signing-key.pem` on Jeff's PC,
+  never in the repo — losing it means servers can't take updates until the new
+  public key is uploaded by hand). To release server version X:
+  1. bump `SEALPOST_SERVER_VERSION`, run `devtest/stamp.sh`, add "New in X" to
+     `server/README.txt`, commit;
+  2. `node sealpost-web/tools/release-server.js --note "…"` (refuses uncommitted
+     server changes, an unstamped `sw.js`, or a key that doesn't match);
+  3. `gh release create server-vX --latest=false …zip …zip.sig` FIRST,
+  4. then commit + push `server-update.json` (servers must never be pointed at
+     a file that isn't downloadable yet).
+  Servers older than 1.10.0 have no updater: upload 1.10.0 by hand once.
+  `status.php` should show all green and the new server version.
+- Tests for the updater: `sealpost/test/server-update-test.js` (needs php with
+  pdo_sqlite, zip, curl, sodium — the local ini needs `extension=zip` too).
 - Changelogs: desktop → "Version history" in `sealpost/README.md`;
   server/web → "New in x.y.z" in `sealpost-web/server/README.txt`. Update
   the right one with every release.

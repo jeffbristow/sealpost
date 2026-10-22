@@ -24,15 +24,16 @@
  * settings.js, small shared helpers in ui.js.
  * ===================================================================== */
 
-import * as vault from './vault.js?v=1.9.2';
-import { Keyring } from './pgp.js?v=1.9.2';
-import { readMessage } from './reader.js?v=1.9.2';
-import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.9.2';
-import { initComposer } from './composer.js?v=1.9.2';
-import { initPeople } from './people.js?v=1.9.2';
-import { initTools } from './tools.js?v=1.9.2';
-import { initSettings } from './settings.js?v=1.9.2';
-import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.9.2';   // 1.6.0
+import * as vault from './vault.js?v=1.10.0';
+import { Keyring } from './pgp.js?v=1.10.0';
+import { readMessage } from './reader.js?v=1.10.0';
+import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.10.0';
+import { initComposer } from './composer.js?v=1.10.0';
+import { initPeople } from './people.js?v=1.10.0';
+import { initTools } from './tools.js?v=1.10.0';
+import { initSettings } from './settings.js?v=1.10.0';
+import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.10.0';   // 1.6.0
+import { initUpdates } from './update.js?v=1.10.0';   // 1.10.0
 
 /* =================================================================
  * 1. STATE + CONTEXT
@@ -109,6 +110,7 @@ const composer = initComposer(ctx);
 const people = initPeople(ctx);
 const tools = initTools(ctx);
 const settings = initSettings(ctx);
+const updates = initUpdates(ctx);   // 1.10.0
 
 /* =================================================================
  * 2. SAVING TO THE VAULT + KEYRING REFRESH
@@ -195,6 +197,7 @@ async function startApp() {
   timers.push(setInterval(refreshVault, 300000));
   timers.push(setInterval(checkIdle, 30000));
   switchView('mail');
+  updates.start();   // 1.10.0: a newer Sealpost Server? (doesn't hold up the mail)
   await loadAccounts();
 }
 
@@ -460,7 +463,7 @@ function switchView(name) {
   if (name === 'contacts') people.showContacts();
   if (name === 'keys') people.showKeys();
   if (name === 'tools') tools.showTools();
-  if (name === 'settings') { settings.showSettings(); renderDevicePanel(); }
+  if (name === 'settings') { settings.showSettings(); renderDevicePanel(); updates.renderPanel(); }
   if (state.vault) renderTree();
   closeNav();
 }
