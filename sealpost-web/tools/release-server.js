@@ -61,7 +61,8 @@ const out = path.join(root, 'sealpost-web', 'dist');
 fs.mkdirSync(out, { recursive: true });
 const name = `Sealpost-Web-Server-${version}.zip`;
 const zip = path.join(out, name);
-git('archive', '--format=zip', '--prefix=sealpost-server/', '-o', zip, 'HEAD:sealpost-web/server');
+// core.autocrlf off: the files keep the repository's LF line endings (what the web host runs), not this PC's CRLF
+git('-c', 'core.autocrlf=false', 'archive', '--format=zip', '--prefix=sealpost-server/', '-o', zip, 'HEAD:sealpost-web/server');
 const data = fs.readFileSync(zip);
 const sha256 = crypto.createHash('sha256').update(data).digest('hex');
 
