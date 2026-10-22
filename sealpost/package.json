@@ -104,7 +104,7 @@
       "target": [
         "dmg"
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icons/512x512.png",
       "category": "public.app-category.productivity",
       "identity": "-",
       "hardenedRuntime": false,

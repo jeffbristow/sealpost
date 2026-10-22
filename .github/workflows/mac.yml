@@ -60,6 +60,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >
           npx electron-builder --mac dmg --x64 --arm64 --publish never
+          "-c.electronVersion=$(node -p "require('electron/package.json').version")"
           -c.mac.minimumSystemVersion=${{ matrix.minimum }}
           '-c.dmg.artifactName=${{ matrix.name }}'
 
