@@ -1,0 +1,20 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# The real server config holds this install's one-time setup code.
+# Use sealpost-web/server/config.example.php as the template.
+sealpost-web/server/config.php
+
+# Never commit data or secrets
+sealpost-data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sealbackup
+*.pem
+*.key
+.env*
+
+# Local tooling
+.claude/settings.local.json

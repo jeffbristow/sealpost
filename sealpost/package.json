@@ -1,0 +1,105 @@
+{
+  "name": "sealpost",
+  "productName": "Sealpost",
+  "version": "1.10.0",
+  "description": "Desktop email client with built-in OpenPGP encryption, signing and key management",
+  "main": "src/main/bootstrap.js",
+  "author": {
+    "name": "Jeff",
+    "email": "jeff@thebristows.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js",
+    "dist": "electron-builder --win nsis --x64 --publish never",
+    "dist:portable": "electron-builder --win portable --x64 --publish never",
+    "update-file": "node build/make-update.js",
+    "dist:linux": "electron-builder --linux AppImage deb --x64 --publish never"
+  },
+  "dependencies": {
+    "imapflow": "^1.0.170",
+    "mailparser": "^3.7.1",
+    "nodemailer": "^10.1.0",
+    "openpgp": "^6.1.0",
+    "html-to-text": "^10.0.1"
+  },
+  "devDependencies": {
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "resedit": "^2.0.3"
+  },
+  "build": {
+    "appId": "com.sealpost.mail",
+    "productName": "Sealpost",
+    "copyright": "Sealpost",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "afterPack": "build/afterPack.js",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "publish": null,
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sealpost"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icons",
+      "category": "Network;Email",
+      "synopsis": "Email with built-in OpenPGP encryption",
+      "description": "Email with built-in OpenPGP encryption, signing and key management",
+      "maintainer": "Jeff <jeff@thebristows.com>",
+      "executableName": "sealpost",
+      "artifactName": "Sealpost-${version}-${arch}.${ext}",
+      "desktop": {
+        "entry": {
+          "Name": "Sealpost",
+          "GenericName": "Encrypted Mail",
+          "Keywords": "mail;email;pgp;gpg;encryption;"
+        }
+      },
+      "syncDesktopName": true
+    },
+    "deb": {
+      "packageCategory": "mail",
+      "priority": "optional",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libasound2 | libasound2t64"
+      ],
+      "recommends": [
+        "gnome-keyring | kwalletmanager"
+      ]
+    },
+    "appImage": {
+      "artifactName": "Sealpost-${version}-x86_64.AppImage"
+    }
+  },
+  "homepage": "https://jeffbristow.com/mysite/SealPost/",
+  "desktopName": "sealpost.desktop"
+}

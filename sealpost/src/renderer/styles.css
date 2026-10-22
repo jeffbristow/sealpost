@@ -1,0 +1,356 @@
+/* =====================================================================
+   Sealpost — styles.css
+   Sections: 1 tokens · 2 base · 3 layout · 4 sidebar · 5 message list
+             6 reader + PGP banners · 7 keys · 8 tools/settings
+             9 forms/buttons · 10 modals · 11 toasts
+   ===================================================================== */
+
+/* ---------- 1. Design tokens ---------- */
+:root {
+  --bg: #121418;
+  --bg-2: #181b21;
+  --bg-3: #1f232b;
+  --bg-4: #272c36;
+  --line: #2c313b;
+  --text: #e6e8ec;
+  --text-2: #a3a9b5;
+  --text-3: #6f7685;
+  --accent: #3ccf91;          /* "sealed" green */
+  --accent-2: #2aa874;
+  --accent-ink: #062418;
+  --blue: #5aa9ff;
+  --amber: #f0b445;
+  --red: #ff6464;
+  --radius: 8px;
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+/* ---------- 2. Base ---------- */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); overflow: hidden; user-select: none; }
+input, textarea, select, button { font: inherit; color: inherit; }
+textarea, input, pre, .selectable { user-select: text; }
+h1, h2, h3 { margin: 0 0 8px; font-weight: 600; }
+h2 { font-size: 20px; } h3 { font-size: 15px; margin-top: 14px; }
+.muted { color: var(--text-2); } .small { font-size: 12px; }
+.hidden { display: none !important; }
+.error { color: var(--red); min-height: 1em; margin: 6px 0; }
+.spacer { flex: 1; }
+.row { display: flex; align-items: center; } .row.gap { gap: 8px; } .row.wrap { flex-wrap: wrap; } .row.between { justify-content: space-between; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 6px; border: 2px solid var(--bg); }
+
+/* ---------- 3. Layout ---------- */
+#app { display: grid; grid-template-columns: 250px 1fr; height: 100vh; }
+.view { display: none; height: 100vh; overflow: hidden; }
+.view.active { display: flex; }
+#view-mail { display: none; }
+#view-mail.active { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; }
+#view-keys, #view-contacts, #view-tools, #view-settings { flex-direction: column; padding: 22px 28px; overflow: auto; }
+.view-head { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ---------- 4. Sidebar ---------- */
+#sidebar { background: var(--bg-2); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 10px; font-weight: 700; font-size: 17px; letter-spacing: .2px; }
+.brand-icon { width: 26px; height: 26px; border-radius: 6px; }
+.compose-btn { margin: 4px 14px 12px; }
+.account-tree { flex: 1; overflow: auto; padding: 0 8px; }
+.acct-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-3); padding: 12px 8px 4px; display: flex; justify-content: space-between; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--text-2); white-space: nowrap; overflow: hidden; }
+.folder:hover { background: var(--bg-3); color: var(--text); }
+.folder.active { background: var(--bg-4); color: var(--text); }
+.folder .name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.folder .count { background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 700; }
+.nav-bottom { border-top: 1px solid var(--line); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.nav-btn { text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 6px; color: var(--text-2); cursor: pointer; }
+.nav-btn:hover { background: var(--bg-3); color: var(--text); }
+.nav-btn.active { background: var(--bg-4); color: var(--text); }
+.nav-btn.subtle { font-size: 12px; color: var(--text-3); }
+
+/* ---------- 5. Message list ---------- */
+#listPane { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.list-head { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+.list-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+.list-tools { display: flex; gap: 6px; }
+.list-tools input { flex: 1; }
+.message-list { flex: 1; overflow: auto; outline: none; }
+.msg { padding: 10px 14px 10px 18px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; }
+.msg:hover { background: var(--bg-2); }
+.msg.active { background: var(--bg-3); }
+.msg .read-dot { position: absolute; left: 1px; top: 9px; width: 18px; height: 18px; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
+.msg .read-dot::after { content: ""; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; }
+.msg.unread .read-dot::after { background: var(--accent); }
+.msg:not(.unread):hover .read-dot::after { border: 1.5px solid var(--text-3); }
+.msg .read-dot:hover::after { transform: scale(1.25); }
+.msg .top { display: flex; gap: 8px; align-items: baseline; }
+.msg .from { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.msg.unread .from, .msg.unread .subj { color: var(--text); font-weight: 600; }
+.msg .date { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.msg .subj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); margin-top: 2px; }
+.msg .badges { font-size: 12px; display: inline-flex; gap: 4px; margin-left: 4px; }
+.badge { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
+.badge.enc { background: rgba(60,207,145,.15); color: var(--accent); }
+.badge.sig { background: rgba(90,169,255,.15); color: var(--blue); }
+.badge.warn { background: rgba(240,180,69,.15); color: var(--amber); }
+.badge.bad { background: rgba(255,100,100,.15); color: var(--red); }
+.badge.plain { background: var(--bg-4); color: var(--text-2); }
+.load-more { margin: 10px; }
+.list-empty { padding: 30px; text-align: center; color: var(--text-3); }
+
+/* ---------- 6. Reader + PGP banners ---------- */
+#readerPane { overflow: auto; min-width: 0; background: var(--bg); }
+#reader { padding: 16px 26px 30px; display: flex; flex-direction: column; min-height: 100%; }
+.reader-actions { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+#rSubject { font-size: 21px; line-height: 1.3; user-select: text; }
+.reader-meta { color: var(--text); font-size: 13px; display: grid; gap: 2px; margin-bottom: 12px; user-select: text; }
+.reader-meta .muted { display: inline-block; min-width: 38px; }
+.pgp-banner { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius); margin-bottom: 8px; border: 1px solid; }
+.pgp-banner .ico { font-size: 18px; line-height: 1.2; }
+.pgp-banner .msg-txt { flex: 1; }
+.pgp-banner b { font-weight: 600; }
+.pgp-banner .sub { font-size: 12px; color: var(--text-2); font-family: var(--mono); word-break: break-all; }
+.pgp-banner.ok { background: rgba(60,207,145,.08); border-color: rgba(60,207,145,.35); }
+.pgp-banner.info { background: rgba(90,169,255,.08); border-color: rgba(90,169,255,.35); }
+.pgp-banner.warn { background: rgba(240,180,69,.08); border-color: rgba(240,180,69,.35); }
+.pgp-banner.bad { background: rgba(255,100,100,.08); border-color: rgba(255,100,100,.4); }
+.notice { background: var(--bg-3); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 8px; color: var(--text-2); display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.att { background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; display: flex; gap: 8px; align-items: center; max-width: 100%; }
+.att .att-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+.att .att-size { color: var(--text-3); font-size: 12px; }
+#bodyWrap { flex: 1; display: flex; flex-direction: column; min-height: 300px; }
+.body-toggle { display: flex; gap: 6px; margin-bottom: 6px; }
+#htmlBody { flex: 1; width: 100%; min-height: 480px; border: 0; border-radius: var(--radius); background: #fff; }
+.text-body { white-space: pre-wrap; word-wrap: break-word; font: 14px/1.55 var(--font); margin: 0; padding: 4px 0; }
+.text-body .quote { color: var(--text-2); border-left: 3px solid var(--bg-4); padding-left: 10px; display: block; }
+.empty-state { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-3); }
+.empty-state.small { height: auto; padding: 40px 0; }
+.empty-icon { font-size: 54px; opacity: .25; }
+
+/* ---------- 7. Keys ---------- */
+.keys-layout { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(380px, 1.1fr); gap: 20px; flex: 1; min-height: 0; }
+.key-list { margin-top: 10px; overflow: auto; }
+.key-row { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 6px; cursor: pointer; background: var(--bg-2); }
+.key-row:hover { border-color: var(--bg-4); background: var(--bg-3); }
+.key-row.active { border-color: var(--accent-2); }
+.key-row .uid { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.key-row .kid { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+.key-row .badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.key-detail { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; overflow: auto; }
+.kv { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; margin: 12px 0; user-select: text; }
+.kv .k { color: var(--text-3); }
+.fp { font-family: var(--mono); font-size: 13px; letter-spacing: .5px; word-break: break-all; }
+.key-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.lookup-result { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; margin: 8px 0; background: var(--bg-3); }
+
+/* ---------- 8. Tools + settings ---------- */
+.tools-grid, .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.panel { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.panel textarea { font-family: var(--mono); font-size: 12.5px; }
+.account-list .acct { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); margin-top: 8px; }
+.acct .info { flex: 1; overflow: hidden; } .acct .info div { overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 9. Forms + buttons ---------- */
+label { font-size: 12px; color: var(--text-2); margin-top: 6px; display: block; }
+label.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=search], select, textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; outline: none; width: 100%;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent-2); }
+select { cursor: pointer; }
+textarea { resize: vertical; }
+.full { width: 100%; }
+.btn { background: var(--bg-3); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--bg-4); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { background: #4ee0a2; }
+.btn.danger { color: var(--red); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.icon-btn { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 9px; cursor: pointer; color: var(--text-2); }
+.icon-btn:hover { background: var(--bg-3); color: var(--text); }
+.icon-btn.danger:hover { color: var(--red); }
+.icon-btn.on { color: var(--amber); }
+#moveSelect { width: auto; padding: 4px 8px; }
+
+/* ---------- 10. Modals ---------- */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(760px, 94vw); max-height: 92vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.modal-card.narrow { width: min(460px, 94vw); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.modal-head h3 { margin: 0; }
+.modal-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.compose-card { width: min(980px, 96vw); height: 90vh; display: flex; flex-direction: column; }
+.compose-fields { display: grid; grid-template-columns: 70px 1fr; gap: 6px 10px; align-items: center; }
+.compose-fields label { margin: 0; text-align: right; }
+.pgp-toggles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.toggle { display: inline-flex; margin: 0; cursor: pointer; }
+.toggle input { display: none; }
+.toggle span { padding: 5px 11px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg-3); color: var(--text-2); font-size: 13px; }
+.toggle input:checked + span { background: rgba(60,207,145,.15); border-color: var(--accent-2); color: var(--accent); }
+.key-status { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.key-chip { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--line); }
+.key-chip.ok { color: var(--accent); border-color: rgba(60,207,145,.4); }
+.key-chip.missing { color: var(--amber); border-color: rgba(240,180,69,.4); cursor: pointer; }
+#cBody { flex: 1; min-height: 200px; font: 14px/1.55 var(--font); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { background: var(--bg-3); border-radius: 14px; padding: 3px 4px 3px 10px; font-size: 12px; display: flex; gap: 4px; align-items: center; }
+.chip button { background: none; border: 0; cursor: pointer; color: var(--text-3); }
+.acct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+.acct-grid .full-col { grid-column: 1 / -1; }
+.acct-grid .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#dlgBody textarea { font-family: var(--mono); font-size: 12px; min-height: 260px; }
+
+/* ---------- 11. Toasts ---------- */
+#toasts { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+.toast { background: var(--bg-4); border-left: 4px solid var(--accent); padding: 10px 14px; border-radius: 6px; max-width: 420px; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: slide .2s ease-out; user-select: text; }
+.toast.err { border-color: var(--red); }
+.toast.warn { border-color: var(--amber); }
+@keyframes slide { from { transform: translateY(10px); opacity: 0; } }
+
+/* =====================================================================
+   12. Added in 1.1.0 — rich text editor, autocomplete, contacts,
+       lock screen, expiry banner
+   ===================================================================== */
+
+/* ---------- Rich text editor ---------- */
+.editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px; margin-bottom: 6px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 6px; }
+.editor-bar .tb-group { display: flex; gap: 2px; align-items: center; padding-right: 8px; border-right: 1px solid var(--line); }
+.editor-bar button { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 8px; cursor: pointer; color: var(--text); min-width: 28px; position: relative; }
+.editor-bar button:hover { background: var(--bg-4); }
+.editor-bar button.on { background: var(--bg-4); border-color: var(--accent-2); }
+.editor-bar select { width: auto; padding: 3px 6px; font-size: 12px; }
+.editor-bar input[type=color] { width: 26px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.editor-bar .color-bar { position: absolute; left: 6px; right: 6px; bottom: 2px; height: 3px; border-radius: 2px; }
+.editor-bar.plain .rich-only { display: none; }
+.small-toggle span { padding: 3px 10px; font-size: 12px; }
+.rich-editor { flex: 1; min-height: 200px; overflow: auto; background: #fff; color: #111; border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font: 14px/1.5 "Segoe UI", Arial, sans-serif; outline: none; user-select: text; }
+.rich-editor:focus { border-color: var(--accent-2); }
+.rich-editor blockquote { margin: 6px 0; padding-left: 12px; border-left: 3px solid #c8ccd4; color: #555; }
+.rich-editor a { color: #1a5fd0; }
+.rich-editor p { margin: 0 0 8px; }
+
+/* ---------- Address autocomplete ---------- */
+.ac-box { position: fixed; z-index: 80; background: var(--bg-2); border: 1px solid var(--bg-4); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.45); max-height: 280px; overflow: auto; min-width: 320px; }
+.ac-item { padding: 7px 12px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.ac-item:hover, .ac-item.sel { background: var(--bg-4); }
+.ac-item .ac-email { color: var(--text-2); font-size: 12px; }
+.ac-item .ac-lock { width: 18px; text-align: center; }
+
+/* ---------- Key chips (composer) ---------- */
+.key-chip.changed { color: var(--red); border-color: rgba(255,100,100,.5); cursor: pointer; }
+.key-chip.ok .ver { color: var(--accent); }
+
+/* ---------- Contacts ---------- */
+.contact-form { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; align-items: center; margin: 12px 0; }
+.contact-form label { margin: 0; }
+.contact-form .full-col { grid-column: 1 / -1; }
+.key-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg-3); }
+.key-box .fp { font-size: 12px; }
+.inline-warn { border: 1px solid rgba(240,180,69,.4); background: rgba(240,180,69,.08); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+
+/* ---------- Expiry ---------- */
+.nav-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-left: 4px; vertical-align: middle; }
+#expiryBanner .pgp-banner { margin-bottom: 12px; }
+
+/* ---------- Lock screen ---------- */
+.lock-screen { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+.lock-card { width: 340px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.lock-card h2 { margin: 4px 0 8px; }
+.lock-icon { width: 72px; height: 72px; margin: 0 auto; border-radius: 16px; }
+.lock-card input { text-align: center; font-size: 20px; letter-spacing: 6px; padding: 10px; }
+.lock-card input::placeholder { letter-spacing: normal; font-size: 15px; }
+.lock-card #lockPass { letter-spacing: normal; font-size: 15px; }
+.lock-card .btn { padding: 9px 12px; margin-top: 8px; width: 100%; }
+.linklike { background: none; border: 0; color: var(--text-2); cursor: pointer; font-size: 12px; text-decoration: underline; margin-top: 6px; }
+.linklike:hover { color: var(--text); }
+
+/* =====================================================================
+   13. Added in 1.2.0 — push status, backup
+   ===================================================================== */
+.push-status { font-size: 11px; font-weight: 500; margin-left: 8px; padding: 1px 8px; border-radius: 10px; vertical-align: middle; cursor: default; }
+.push-status.live { color: var(--accent); background: rgba(60,207,145,.12); }
+.push-status.polling { color: var(--text-2); background: var(--bg-3); }
+.push-status.connecting, .push-status.offline { color: var(--amber); background: rgba(240,180,69,.12); }
+.restore-summary { background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+.restore-summary li { margin: 2px 0; }
+
+/* =====================================================================
+   14. Added in 1.3.0 — offline mail, Outbox
+   ===================================================================== */
+.offline-bar { background: rgba(240,180,69,.12); color: var(--amber); border-bottom: 1px solid rgba(240,180,69,.3); padding: 7px 14px; font-size: 12.5px; }
+.msg.not-saved { opacity: .45; }
+.msg .saved-dot { font-size: 10px; color: var(--text-3); margin-left: 4px; }
+.nav-count { background: var(--amber); color: #2a1d00; border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+.outbox-item { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; background: var(--bg-3); display: flex; gap: 10px; align-items: center; }
+.outbox-item .info { flex: 1; min-width: 0; }
+.outbox-item .info div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-bar { height: 8px; border-radius: 4px; background: var(--bg-4); overflow: hidden; margin: 4px 0 10px; }
+.usage-bar > span { display: block; height: 100%; background: var(--accent); }
+.kv2 { display: grid; grid-template-columns: 170px 1fr; gap: 6px 12px; align-items: center; margin: 8px 0; }
+.kv2 label { margin: 0; }
+
+/* =====================================================================
+ * 15. SYNC WITH MY WEB SERVER (1.4.0)
+ * ===================================================================== */
+.cloud-status { background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 4px 0 8px; line-height: 1.6; }
+.cloud-status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--accent); vertical-align: middle; }
+.cloud-status .dot.warn { background: var(--amber); }
+.cloud-status .dot.bad { background: var(--red); }
+.cloud-devices { list-style: none; padding: 0; margin: 8px 0; }
+.cloud-devices li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.cloud-devices li:first-child { border-top: 0; }
+.cloud-devices .grow { flex: 1; min-width: 0; }
+.cloud-code { font-family: var(--mono); letter-spacing: 1px; }
+
+/* =====================================================================
+ * 16. REMEMBER ON ALL MY DEVICES (1.5.0)
+ * ===================================================================== */
+.sync-pass { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-3); }
+.sync-pass p { margin: 4px 0 0 26px; }
+
+/* =====================================================================
+ * 17. READ / UNREAD + RIGHT-CLICK MENUS (1.6.0)
+ * ===================================================================== */
+.ctx-menu { position: fixed; z-index: 120; min-width: 220px; background: var(--bg-2); border: 1px solid var(--bg-4); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.5); padding: 4px; display: flex; flex-direction: column; }
+.ctx-item { text-align: left; background: none; border: 0; padding: 7px 12px; border-radius: 5px; cursor: pointer; color: var(--text); white-space: nowrap; }
+.ctx-item:hover, .ctx-item:focus { background: var(--bg-4); outline: none; }
+.ctx-item.danger { color: var(--red); }
+.ctx-sep { height: 1px; background: var(--line); margin: 4px 6px; }
+
+/* =====================================================================
+ * 18. SELECTING SEVERAL MESSAGES (1.7.0)
+ * ===================================================================== */
+.bulk-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding: 6px 8px; background: var(--bg-3); border: 1px solid var(--accent-2); border-radius: 8px; }
+.bulk-count { font-weight: 600; font-size: 13px; margin-right: 4px; }
+.bulk-bar .btn.small { padding: 3px 8px; }
+.bulk-move { width: auto !important; max-width: 110px; padding: 3px 6px !important; font-size: 12px; }
+.msg .sel-box { display: none; position: absolute; right: 10px; bottom: 10px; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.message-list.selecting .msg .sel-box, .msg:hover .sel-box { display: block; }
+.msg.selected { background: rgba(60,207,145,.10); }
+.msg.selected.active { background: rgba(60,207,145,.16); }
+#btnSelectMode.on { color: var(--accent); border-color: var(--accent-2); }
+
+/* ---------- 19. Added in 1.9.0 — "Send as" ---------- */
+.key-chip.info { color: var(--blue); border-color: rgba(90,169,255,.4); cursor: pointer; }
+.folder.noselect { opacity: .6; cursor: default; }   /* 1.9.1: folder that only holds other folders */
+
+/* ---------- 20. Added in 1.10.0 — favorites, pins, folders, conversations ---------- */
+.acct-label { display: flex; align-items: center; gap: 6px; }
+.acct-label .acct-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-label .acct-add { visibility: hidden; background: none; border: 0; color: var(--text-3); cursor: pointer; font-size: 13px; padding: 0 4px; border-radius: 4px; }
+.acct-label:hover .acct-add { visibility: visible; }
+.acct-label .acct-add:hover { color: var(--text); background: var(--bg-3); }
+.folder.fav .name .small { font-size: 11px; }
+.folder.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: rgba(60,207,145,.10); }
+.msg.thread .tw { display: inline-block; width: 14px; color: var(--text-3); }
+.msg.thread .tcount { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--bg-4); color: var(--text-2); font-size: 11px; font-weight: 600; text-align: center; }
+.msg.thread.open { background: var(--bg-3); }
+.msg.child { padding-left: 34px; border-left: 3px solid var(--bg-4); }
+.msg.child .read-dot { left: 18px; }
+.msg .acct-tag { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+#btnConv.on { color: var(--accent); border-color: var(--accent-2); }
+.ctx-item.danger { color: var(--red); }

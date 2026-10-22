@@ -1,0 +1,436 @@
+<!doctype html>
+<!-- =====================================================================
+  Sealpost — index.html
+  App layout. Views: Mail, Keys, PGP Tools, Settings.
+  Modals: Compose, Passphrase, Generate key, Account editor, generic.
+  Logic lives in app.js, styling in styles.css.
+====================================================================== -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Content Security Policy: no remote scripts, ever. Remote images are
+       allowed at this level only so the per-message toggle can work; the
+       email iframe adds its own stricter policy. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; frame-src 'self' about:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>Sealpost</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- =============================== SIDEBAR ============================== -->
+  <aside id="sidebar">
+    <div class="brand">
+      <img src="icon.png" alt="" class="brand-icon">
+      <span>Sealpost</span>
+    </div>
+    <button id="btnCompose" class="btn primary compose-btn">✎ New message</button>
+
+    <nav id="accountTree" class="account-tree"><!-- accounts + folders rendered by app.js --></nav>
+
+    <div class="nav-bottom">
+      <button class="nav-btn active" data-view="mail">✉ Mail</button>
+      <button class="nav-btn hidden" id="btnOutbox" title="Messages waiting to be sent">📤 Outbox <span id="outboxCount" class="nav-count"></span></button>
+      <button class="nav-btn" data-view="contacts">👥 Contacts</button>
+      <button class="nav-btn" data-view="keys">🔑 Keys <span id="keysDot" class="nav-dot hidden" title="A key needs attention"></span></button>
+      <button class="nav-btn" data-view="tools">🛡 PGP Tools</button>
+      <button class="nav-btn" data-view="settings">⚙ Settings</button>
+      <button id="btnLockApp" class="nav-btn subtle hidden" title="Lock Sealpost now (PIN / Windows Hello to reopen)">🔐 Lock Sealpost</button>
+      <button id="btnLockAll" class="nav-btn subtle" title="Forget all unlocked private keys">🔒 Lock keys</button>
+    </div>
+  </aside>
+
+  <!-- =============================== MAIL VIEW ============================ -->
+  <section id="view-mail" class="view active">
+    <div id="listPane">
+      <div class="list-head">
+        <div class="list-title"><span id="folderTitle">Inbox</span> <span id="folderCount" class="muted"></span>
+          <!-- 1.2.0: push connection status for this account -->
+          <span id="pushStatus" class="push-status hidden"></span></div>
+        <div class="list-tools">
+          <input id="searchBox" type="search" placeholder="Search subject, sender, body…">
+          <button id="btnConv" class="icon-btn hidden" title="Group replies into conversations (this account)">💬</button>
+          <button id="btnSelectMode" class="icon-btn" title="Select messages (or Ctrl/Shift-click)">☐</button>
+          <button id="btnMarkAllRead" class="icon-btn" title="Mark all messages in this folder as read">✓</button>
+          <button id="btnRefresh" class="icon-btn" title="Refresh (F5)">⟳</button>
+        </div>
+        <!-- 1.7.0: actions for several selected messages -->
+        <div id="bulkBar" class="bulk-bar hidden">
+          <span id="bulkCount" class="bulk-count"></span>
+          <button class="btn small" data-bulk="read" title="Mark read">○ Read</button>
+          <button class="btn small" data-bulk="unread" title="Mark unread">● Unread</button>
+          <button class="btn small" data-bulk="flag" title="Flag">⚑</button>
+          <select id="bulkMove" class="bulk-move" title="Move selected to"></select>
+          <button class="btn small danger" data-bulk="delete" title="Delete (Del)">🗑</button>
+          <span class="spacer"></span>
+          <button class="btn small ghost" data-bulk="all" title="Select all (Ctrl+A)">All</button>
+          <button class="icon-btn" data-bulk="clear" title="Clear selection (Esc)">✕</button>
+        </div>
+      </div>
+      <!-- 1.3.0: shown while this account can't reach its server -->
+      <div id="offlineBar" class="offline-bar hidden">📴 <b>Offline</b> — showing mail saved on this PC. Messages you send wait in the Outbox.</div>
+      <div id="messageList" class="message-list" tabindex="0"></div>
+      <button id="btnMore" class="btn ghost load-more hidden">Load older messages</button>
+    </div>
+
+    <div id="readerPane">
+      <div id="readerEmpty" class="empty-state">
+        <div class="empty-icon">✉</div>
+        <p>Select a message to read it.</p>
+      </div>
+      <article id="reader" class="hidden">
+        <div class="reader-actions">
+          <button class="btn" data-act="reply">↩ Reply</button>
+          <button class="btn" data-act="replyAll">↩↩ Reply all</button>
+          <button class="btn" data-act="forward">↪ Forward</button>
+          <span class="spacer"></span>
+          <button class="icon-btn" data-act="flag" title="Flag">⚑</button>
+          <button class="icon-btn" data-act="unread" title="Mark unread (Ctrl+U)">●</button>
+          <select id="moveSelect" title="Move to folder"><option value="">Move to…</option></select>
+          <button class="icon-btn" data-act="addContact" title="Add sender to contacts">👤+</button>
+          <button class="icon-btn" data-act="source" title="View source">&lt;/&gt;</button>
+          <button class="icon-btn danger" data-act="delete" title="Delete (Del)">🗑</button>
+        </div>
+        <h1 id="rSubject"></h1>
+        <div class="reader-meta">
+          <div><span class="muted">From</span> <span id="rFrom"></span></div>
+          <div><span class="muted">To</span> <span id="rTo"></span></div>
+          <div id="rCcRow"><span class="muted">Cc</span> <span id="rCc"></span></div>
+          <div class="muted" id="rDate"></div>
+        </div>
+        <div id="pgpBanner"></div>
+        <div id="remoteBar" class="notice hidden">
+          Remote images are blocked to protect your privacy.
+          <button id="btnLoadImages" class="btn small">Load images</button>
+        </div>
+        <div id="attachments" class="attachments"></div>
+        <div id="bodyWrap">
+          <div class="body-toggle hidden" id="bodyToggle">
+            <button class="btn small" data-mode="html">Formatted</button>
+            <button class="btn small" data-mode="text">Plain text</button>
+          </div>
+          <iframe id="htmlBody" sandbox="allow-popups allow-popups-to-escape-sandbox" class="hidden" title="Message body"></iframe>
+          <pre id="textBody" class="text-body"></pre>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- =============================== CONTACTS VIEW (1.1.0) =============== -->
+  <section id="view-contacts" class="view">
+    <div class="view-head">
+      <h2>Contacts</h2>
+      <div class="row gap"><button id="btnNewContact" class="btn primary">+ New contact</button></div>
+    </div>
+    <div class="keys-layout">
+      <div>
+        <input id="contactFilter" type="search" placeholder="Search contacts" class="full">
+        <div id="contactList" class="key-list"></div>
+      </div>
+      <div id="contactDetail" class="key-detail">
+        <div class="empty-state small"><p>Select a contact, or create one.<br>Each contact can have a PGP key assigned, which Sealpost then always uses for them.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================== KEYS VIEW ============================ -->
+  <section id="view-keys" class="view">
+    <div class="view-head">
+      <h2>PGP Keys</h2>
+      <div class="row gap">
+        <button id="btnGenKey" class="btn primary">+ Generate key pair</button>
+        <button id="btnImportFile" class="btn">Import file…</button>
+        <button id="btnImportPaste" class="btn">Paste key…</button>
+        <button id="btnLookup" class="btn">Find key online…</button>
+      </div>
+    </div>
+    <div id="expiryBanner"></div>
+    <div class="keys-layout">
+      <div>
+        <input id="keyFilter" type="search" placeholder="Filter by name, email or fingerprint" class="full">
+        <div id="keyList" class="key-list"></div>
+      </div>
+      <div id="keyDetail" class="key-detail">
+        <div class="empty-state small"><p>Select a key to see details.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================== TOOLS VIEW =========================== -->
+  <section id="view-tools" class="view">
+    <div class="view-head">
+      <h2>PGP Tools</h2>
+      <p class="muted">Encrypt, sign, decrypt or verify any text — handy for webmail, chat, or forms.</p>
+    </div>
+    <div class="tools-grid">
+      <div class="panel">
+        <label>Input</label>
+        <textarea id="toolIn" rows="16" placeholder="Type or paste text, a PGP message, a signed block, or a public key…"></textarea>
+        <div class="row gap">
+          <button id="toolPaste" class="btn small">Paste</button>
+          <button id="toolClear" class="btn small ghost">Clear</button>
+        </div>
+        <label>Recipients (for encrypt) — comma separated emails</label>
+        <input id="toolRecipients" type="text" placeholder="alice@example.com, bob@example.org">
+        <label>Sign with</label>
+        <select id="toolSigner"><option value="">(don't sign)</option></select>
+        <div class="row gap wrap">
+          <button id="toolEncrypt" class="btn primary">🔒 Encrypt</button>
+          <button id="toolSign" class="btn">✍ Sign (cleartext)</button>
+          <button id="toolProcess" class="btn">🔓 Decrypt / Verify / Import</button>
+        </div>
+      </div>
+      <div class="panel">
+        <label>Output</label>
+        <div id="toolStatus"></div>
+        <textarea id="toolOut" rows="20" readonly></textarea>
+        <button id="toolCopy" class="btn small">Copy output</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================== SETTINGS VIEW ======================== -->
+  <section id="view-settings" class="view">
+    <div class="view-head"><h2>Settings</h2></div>
+    <div class="settings-grid">
+      <div class="panel">
+        <div class="row between"><h3>Email accounts</h3><button id="btnAddAccount" class="btn primary small">+ Add account</button></div>
+        <div id="accountList" class="account-list"></div>
+      </div>
+      <div class="panel">
+        <h3>Privacy &amp; security</h3>
+        <label class="check"><input type="checkbox" id="setRemote"> Load remote images automatically (not recommended)</label>
+        <h3>New mail</h3>
+        <label class="check"><input type="checkbox" id="setPush"> Instant new mail (the server tells Sealpost the moment mail arrives)</label>
+        <label class="check"><input type="checkbox" id="setNotify"> Show a Windows notification for new mail</label>
+        <label>Keep private keys unlocked for (minutes, 0 = ask every time)</label>
+        <input type="number" id="setCache" min="0" max="480">
+        <h3>New message defaults</h3>
+        <label class="check"><input type="checkbox" id="setSign"> Sign messages</label>
+        <label class="check"><input type="checkbox" id="setEncrypt"> Encrypt when every recipient has a key</label>
+        <label class="check"><input type="checkbox" id="setAttachKey"> Attach my public key</label>
+        <label>Write new messages in</label>
+        <select id="setFormat"><option value="plain">Plain text</option><option value="rich">Rich text (formatting)</option></select>
+        <label class="check"><input type="checkbox" id="setAutoContacts"> Add people I write to as contacts automatically</label>
+        <label>Messages per page</label>
+        <input type="number" id="setPage" min="10" max="500">
+        <button id="btnSaveSettings" class="btn primary">Save settings</button>
+        <p class="muted small">Data folder: %APPDATA%\Sealpost — back up the <b>keyring</b> folder there (or export your secret key) so you never lose access to encrypted mail.</p>
+      </div>
+      <!-- Sync with my web server (1.4.0) -->
+      <div class="panel" id="cloudPanel">
+        <h3 style="margin-top:0">Sync with my web server</h3>
+        <p class="muted small">Keeps your accounts, contacts, PGP keys and settings the same on every PC, using the Sealpost Sync files on your own website. Everything is encrypted on this PC with your <b>vault passphrase</b> before it is sent — your server can't read any of it.</p>
+        <div id="cloudPanelBody"></div>
+      </div>
+      <!-- Offline mail (1.3.0) -->
+      <div class="panel" id="offlinePanel">
+        <h3 style="margin-top:0">Offline mail</h3>
+        <p class="muted small">Keeps an encrypted copy of recent mail on this PC so you can read, search and write without a connection. Messages you send while offline wait in the Outbox and go out automatically. The copy is encrypted to your <b>app-lock PIN</b>.</p>
+        <div id="offlinePanelBody"></div>
+      </div>
+      <!-- Backup & restore (1.2.0) -->
+      <div class="panel" id="backupPanel">
+        <h3 style="margin-top:0">Backup &amp; restore</h3>
+        <p class="muted small">One file with your accounts (incl. passwords), settings, contacts and all PGP keys, locked with a backup passphrase. Use it to move to a new PC or recover after a disk failure. Keep it somewhere other than this PC (USB drive, cloud storage).</p>
+        <p id="lastBackup" class="small"></p>
+        <div class="row gap wrap">
+          <button id="btnBackup" class="btn primary">Create backup…</button>
+          <button id="btnRestore" class="btn">Restore from backup…</button>
+        </div>
+      </div>
+      <!-- App lock (1.1.0) -->
+      <div class="panel" id="lockPanel">
+        <h3 style="margin-top:0">App lock</h3>
+        <p class="muted small">Ask for a PIN (or Windows Hello) when Sealpost opens, after inactivity, and when Windows locks. Recommended if you use "Remember passphrase".</p>
+        <div id="lockPanelBody"></div>
+      </div>
+      <!-- Updates (added 1.0.1): install a .sealpost update file without reinstalling -->
+      <div class="panel">
+        <h3 style="margin-top:0">About &amp; updates</h3>
+        <p>Sealpost version <b id="appVersion">…</b></p>
+        <p class="muted small">To apply a fix, choose a <b>.sealpost</b> update file. Your accounts, settings and PGP keys are kept. Sealpost restarts to finish.</p>
+        <div class="row gap"><button id="btnInstallUpdate" class="btn primary">Install update file…</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================================ MODALS ================================ -->
+
+<!-- Compose -->
+<div id="composeModal" class="modal hidden">
+  <div class="modal-card compose-card">
+    <div class="modal-head">
+      <h3 id="composeTitle">New message</h3>
+      <button class="icon-btn" id="cClose" title="Close (Esc)">✕</button>
+    </div>
+    <div class="compose-fields">
+      <label>From</label><select id="cFrom"></select>
+      <!-- address fields get autocomplete from Contacts (1.1.0) -->
+      <label>To</label><input id="cTo" class="addr-input" type="text" placeholder="name@example.com, …" autocomplete="off">
+      <label>Cc</label><input id="cCc" class="addr-input" type="text" autocomplete="off">
+      <label>Bcc</label><input id="cBcc" class="addr-input" type="text" autocomplete="off">
+      <label>Subject</label><input id="cSubject" type="text">
+    </div>
+    <div class="pgp-toggles">
+      <label class="toggle"><input type="checkbox" id="cEncrypt"><span>🔒 Encrypt</span></label>
+      <label class="toggle"><input type="checkbox" id="cSign"><span>✍ Sign</span></label>
+      <label class="toggle"><input type="checkbox" id="cHideSubject"><span>Hide subject</span></label>
+      <label class="toggle"><input type="checkbox" id="cAttachKey"><span>Attach my public key</span></label>
+      <div id="cKeyStatus" class="key-status"></div>
+    </div>
+    <!-- Rich text toolbar (1.1.0) -->
+    <div class="editor-bar" id="cToolbar">
+      <div class="tb-group rich-only">
+        <button type="button" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button type="button" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <button type="button" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+        <select id="cFontSize" title="Text size">
+          <option value="">Size</option><option value="2">Small</option><option value="3">Normal</option><option value="5">Large</option><option value="6">Huge</option>
+        </select>
+        <input type="color" id="cColor" value="#c0392b" title="Text color">
+        <button type="button" data-cmd="foreColorApply" title="Apply text color">A<span class="color-bar" id="cColorBar"></span></button>
+      </div>
+      <div class="tb-group rich-only">
+        <button type="button" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+        <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+        <button type="button" data-cmd="quote" title="Quote">❝</button>
+        <button type="button" data-cmd="link" title="Insert link">🔗</button>
+        <button type="button" data-cmd="removeFormat" title="Clear formatting">⨯ Format</button>
+      </div>
+      <span class="spacer"></span>
+      <label class="toggle small-toggle"><input type="checkbox" id="cRich"><span>Rich text</span></label>
+    </div>
+    <textarea id="cBody" spellcheck="true"></textarea>
+    <div id="cEditor" class="rich-editor hidden" contenteditable="true" spellcheck="true"></div>
+    <div id="cAttachments" class="chips"></div>
+    <div class="modal-foot">
+      <button id="cAttach" class="btn">📎 Attach files</button>
+      <button id="cDiscard" class="btn ghost" title="Delete this message and its draft">Discard</button>
+      <span class="spacer"></span>
+      <span id="cDraftStatus" class="muted small"></span>
+      <span id="cHint" class="muted small"></span>
+      <button id="cSend" class="btn primary" title="Send (Ctrl+Enter)">Send</button>
+    </div>
+  </div>
+</div>
+<!-- address autocomplete list (1.1.0) -->
+<div id="acBox" class="ac-box hidden"></div>
+
+<!-- Passphrase prompt -->
+<div id="passModal" class="modal hidden">
+  <div class="modal-card narrow">
+    <h3>🔑 Unlock private key</h3>
+    <p id="passWho" class="muted"></p>
+    <input id="passInput" type="password" placeholder="Passphrase" autocomplete="off">
+    <!-- 1.0.2: remember passphrase, encrypted to your Windows login -->
+    <label class="check" id="passRememberRow" style="margin-top:10px"><input type="checkbox" id="passRemember"> Remember on this computer (protected by your Windows login)</label>
+    <p class="muted small" id="passRememberNote" style="margin:4px 0 0 24px">Encrypted messages will open without asking. Anyone who can sign in to your Windows account could read them too.</p>
+    <p id="passErr" class="error"></p>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button class="btn ghost" id="passCancel">Cancel</button>
+      <button class="btn primary" id="passOk">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate key -->
+<div id="genModal" class="modal hidden">
+  <div class="modal-card narrow">
+    <div class="modal-head"><h3>Generate a new key pair</h3><button class="icon-btn" data-close>✕</button></div>
+    <label>Your name</label><input id="gName" type="text">
+    <label>Email address</label><input id="gEmail" type="email">
+    <label>Key type</label>
+    <select id="gAlgo">
+      <option value="ecc">ECC Curve25519 (recommended — fast, modern)</option>
+      <option value="rsa4096">RSA 4096 (maximum compatibility with old software)</option>
+    </select>
+    <label>Expires after</label>
+    <select id="gExpire">
+      <option value="1">1 year</option><option value="2" selected>2 years</option>
+      <option value="5">5 years</option><option value="0">Never</option>
+    </select>
+    <label>Passphrase (min. 8 characters)</label><input id="gPass" type="password" autocomplete="new-password">
+    <label>Repeat passphrase</label><input id="gPass2" type="password" autocomplete="new-password">
+    <p class="muted small">Your passphrase cannot be recovered. A revocation certificate is created automatically — export and keep it somewhere safe.</p>
+    <p id="gErr" class="error"></p>
+    <div class="modal-foot"><span class="spacer"></span><button id="gGo" class="btn primary">Generate</button></div>
+  </div>
+</div>
+
+<!-- Account editor -->
+<div id="acctModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="acctTitle">Add account</h3><button class="icon-btn" data-close>✕</button></div>
+    <!-- 1.2.0: first run on a new PC -->
+    <div id="aRestoreHint" class="inline-warn small hidden">Moving from another PC? <button class="btn small" id="aRestoreBtn">Restore from a backup instead</button> <button class="btn small" id="aCloudBtn">Connect to my sync server</button></div>
+    <div class="acct-grid">
+      <div class="full-col"><label>Provider</label><select id="aPreset"></select><p id="aNote" class="muted small"></p></div>
+      <div><label>Display name</label><input id="aName" type="text"></div>
+      <div><label>Email address</label><input id="aEmail" type="email"></div>
+      <div><label>Username</label><input id="aUser" type="text" placeholder="usually your email address"></div>
+      <div><label>Password / app password</label><input id="aPass" type="password" autocomplete="off"></div>
+      <div><label>IMAP server</label><input id="aImapHost" type="text"></div>
+      <div class="split"><div><label>Port</label><input id="aImapPort" type="number"></div>
+        <div><label>Security</label><select id="aImapSec"><option value="ssl">SSL/TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div></div>
+      <div><label>SMTP server</label><input id="aSmtpHost" type="text"></div>
+      <div class="split"><div><label>Port</label><input id="aSmtpPort" type="number"></div>
+        <div><label>Security</label><select id="aSmtpSec"><option value="ssl">SSL/TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div></div>
+      <div><label>SMTP username (if different)</label><input id="aSmtpUser" type="text"></div>
+      <div><label>SMTP password (if different)</label><input id="aSmtpPass" type="password" autocomplete="off"></div>
+      <div class="full-col"><label class="check"><input type="checkbox" id="aSelfSigned"> Accept self-signed certificates (Proton Bridge, local servers)</label></div>
+      <div class="full-col"><label class="check"><input type="checkbox" id="aConv"> Conversation view — group replies with the message they answer (this account only)</label></div>
+      <div class="full-col"><label>Signature (appended to new messages)</label><textarea id="aSig" rows="3"></textarea></div>
+      <!-- 1.9.0: other addresses this mailbox may send as -->
+      <div class="full-col"><label>"Send as" addresses (optional, one per line)</label>
+        <textarea id="aAliases" rows="3" spellcheck="false" placeholder="Jeff Bristow <jeff@jeffbristow.com>"></textarea>
+        <p class="muted small">Other addresses this mailbox is allowed to send from — e.g. Zoho Mail → Settings → Mail Accounts → "Send mail as". Add them there first; then they appear in the From list when you write a message. Sent mail goes through this account's server and lands in its Sent folder.</p></div>
+    </div>
+    <p id="aResult" class="muted"></p>
+    <div class="modal-foot">
+      <button id="aTest" class="btn">Test connection</button>
+      <span class="spacer"></span>
+      <button id="aSave" class="btn primary">Save account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic dialog (prompt / confirm / show text) -->
+<div id="dlgModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="dlgTitle"></h3><button class="icon-btn" data-close>✕</button></div>
+    <div id="dlgBody"></div>
+    <div class="modal-foot"><button id="dlgExtra" class="btn ghost hidden"></button><span class="spacer"></span><button id="dlgCancel" class="btn ghost">Cancel</button><button id="dlgOk" class="btn primary">OK</button></div>
+  </div>
+</div>
+
+<!-- Lock screen (1.1.0) — covers everything until unlocked -->
+<div id="lockScreen" class="lock-screen hidden">
+  <div class="lock-card">
+    <img src="icon.png" alt="" class="lock-icon">
+    <h2>Sealpost is locked</h2>
+    <div id="lockPinArea">
+      <input id="lockPin" type="password" inputmode="numeric" maxlength="12" placeholder="Enter PIN" autocomplete="off">
+      <button id="lockPinGo" class="btn primary">Unlock</button>
+    </div>
+    <div id="lockPassArea" class="hidden">
+      <p class="muted small">Enter the passphrase of any of your PGP keys.</p>
+      <input id="lockPass" type="password" placeholder="Key passphrase" autocomplete="off">
+      <button id="lockPassGo" class="btn primary">Unlock</button>
+    </div>
+    <p id="lockErr" class="error"></p>
+    <button id="lockHello" class="btn hidden">🙂 Use Windows Hello</button>
+    <button id="lockForgot" class="linklike">Forgot PIN? Use a key passphrase</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<!-- 1.6.0: right-click menu for messages and folders -->
+<div id="ctxMenu" class="ctx-menu hidden" role="menu"></div>
+<script src="app.js"></script>
+</body>
+</html>

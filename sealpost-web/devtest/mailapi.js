@@ -1,0 +1,36 @@
+const { deriveKeys } = require('/home/claude/sealpost/src/main/sync');
+const base = process.argv[2];
+const acc = { host: '127.0.0.1', port: 11993, security: 'ssl', username: 'jeff@test.local', password: 'mailpass123', allowSelfSigned: true };
+const post = async (file, action, body, token) => {
+  const r = await fetch(base + file + '?action=' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Sealpost-Token': token } : {}) }, body: JSON.stringify(body) });
+  const ct = r.headers.get('content-type') || '';
+  return ct.includes('json') ? r.json() : { status: r.status, flags: r.headers.get('x-sealpost-flags'), raw: Buffer.from(await r.arrayBuffer()).toString('binary') };
+};
+(async () => {
+  const { authKey } = await deriveKeys('vault passphrase 1', 'jeff');
+  const login = await post('api.php', 'login', { username: 'jeff', authKey, deviceName: 'Test browser', kind: 'web' });
+  const t = login.token;
+  console.log('no token:', JSON.stringify(await post('mail.php', 'folders', { account: acc })));
+  const f = await post('mail.php', 'folders', { account: acc }, t);
+  console.log('folders:', JSON.stringify(f.folders.map(x => [x.path, x.name, x.depth, x.specialUse, x.unseen])));
+  const l = await post('mail.php', 'list', { account: acc, folder: 'INBOX', page: 0, pageSize: 12 }, t);
+  console.log('total', l.total, 'hasMore', l.hasMore); for (const m of l.messages) console.log(' ', m.uid, m.seen ? ' ' : '*', m.encrypted ? 'E' : ' ', m.signed ? 'S' : ' ', m.attachment ? 'A' : ' ', m.subject, '|', m.from[0]?.name, m.date);
+  const s = await post('mail.php', 'list', { account: acc, folder: 'INBOX', search: 'Köln' }, t);
+  console.log('search Köln:', s.total, s.messages.map(m => m.subject));
+  const s2 = await post('mail.php', 'list', { account: acc, folder: 'INBOX', search: 'Newsletter #5' }, t);
+  console.log('search ascii:', s2.total);
+  const g = await post('mail.php', 'list', { account: acc, folder: f.folders.find(x => x.name === 'Größe').path }, t);
+  console.log('subfolder:', g.messages.map(m => m.subject));
+  const msg = await post('mail.php', 'message', { account: acc, folder: 'INBOX', uid: l.messages[0].uid, markSeen: true }, t);
+  console.log('message', msg.status, msg.flags, msg.raw.length, msg.raw.slice(0, 60).replace(/\r\n/g, ' '));
+  console.log('flag:', JSON.stringify(await post('mail.php', 'flag', { account: acc, folder: 'INBOX', uids: [l.messages[0].uid], flag: 'seen', on: false }, t)));
+  console.log('bad pass:', JSON.stringify(await post('mail.php', 'folders', { account: { ...acc, password: 'x' } }, t)));
+  console.log('bad host:', JSON.stringify(await post('mail.php', 'folders', { account: { ...acc, port: 11999 } }, t)));
+  console.log('starttls:', JSON.stringify((await post('mail.php', 'test', { account: { ...acc, port: 11143, security: 'starttls' } }, t))));
+  console.log('selfsigned refused:', JSON.stringify((await post('mail.php', 'test', { account: { ...acc, allowSelfSigned: false } }, t))));
+  const d = await post('mail.php', 'delete', { account: acc, folder: 'INBOX', uids: [l.messages[l.messages.length - 1].uid] }, t);
+  const tr = await post('mail.php', 'list', { account: acc, folder: 'Trash' }, t);
+  console.log('delete:', JSON.stringify(d), 'trash now', tr.total);
+  await post('mail.php', 'move', { account: acc, folder: 'Trash', to: 'INBOX', uids: tr.messages.map(m => m.uid) }, t);
+  console.log('moved back, trash', (await post('mail.php', 'list', { account: acc, folder: 'Trash' }, t)).total);
+})();

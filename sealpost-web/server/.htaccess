@@ -1,0 +1,49 @@
+# =====================================================================
+# Sealpost Web + Sync Server — .htaccess
+# ---------------------------------------------------------------------
+# Sections:
+#   1. No folder listings, index.php is the start page, script types
+#   2. Block files that are never meant to be opened in a browser
+#   3. Pass the "Authorization" header through to PHP (some hosts drop it)
+#   4. Always use HTTPS
+# =====================================================================
+
+# ---- 1. Folder listing off, start page, script types ----
+Options -Indexes
+DirectoryIndex index.php
+AddType text/javascript .js .mjs
+AddType text/css .css
+AddType application/manifest+json .webmanifest
+
+# Sealpost Web files: always check for a newer version (updates show up right away)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|webmanifest)$">
+        Header set Cache-Control "no-cache"
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>
+
+# ---- 2. Block config, library, database and hidden files ----
+<FilesMatch "^(config\.php|lib\.php|imap\.php|smtp\.php)$|\.(sqlite|sqlite-wal|sqlite-shm|db|log|bak)$|^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ---- 3. Authorization header -> PHP ----
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # ---- 4. Redirect plain http:// page visits to https:// ----
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>

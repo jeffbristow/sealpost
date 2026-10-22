@@ -1,0 +1,25 @@
+const { deriveKeys } = require('/home/claude/sealpost/src/main/sync');
+const base = process.argv[2];
+const imap = { host: '127.0.0.1', port: 11993, security: 'ssl', username: 'jeff@test.local', password: 'mailpass123', allowSelfSigned: true };
+const smtp = { host: '127.0.0.1', port: 11465, security: 'ssl', username: 'jeff@test.local', password: 'mailpass123', allowSelfSigned: true };
+const json = (a, b, t) => fetch(base + 'mail.php?action=' + a, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sealpost-Token': t }, body: JSON.stringify(b) }).then(r => r.json());
+const raw = (a, meta, body, t) => fetch(base + 'mail.php?action=' + a, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Sealpost-Token': t, 'X-Sealpost-Meta': Buffer.from(JSON.stringify(meta)).toString('base64') }, body }).then(r => r.json());
+(async () => {
+  const { authKey } = await deriveKeys('vault passphrase 1', 'jeff');
+  const t = (await (await fetch(base + 'api.php?action=login', { method: 'POST', body: JSON.stringify({ username: 'jeff', authKey, deviceName: 'x', kind: 'web' }) })).json()).token;
+  const msg = (id) => `From: Jeff <jeff@test.local>\r\nTo: ann@friend.test\r\nSubject: Test ${id}\r\nMessage-ID: <${id}@test.local>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\nHello\r\n.leading dot line\r\n`;
+  console.log('send ssl:', JSON.stringify(await raw('send', { smtp, imap, from: 'jeff@test.local', to: ['ann@friend.test', 'bob@b.test'] }, msg('a1'), t)));
+  console.log('send starttls:', JSON.stringify(await raw('send', { smtp: { ...smtp, port: 11587, security: 'starttls' }, from: 'jeff@test.local', to: ['ann@friend.test'] }, msg('a2'), t)));
+  console.log('bad pass:', JSON.stringify(await raw('send', { smtp: { ...smtp, password: 'x' }, from: 'jeff@test.local', to: ['ann@friend.test'] }, msg('a3'), t)));
+  console.log('rejected rcpt:', JSON.stringify(await raw('send', { smtp, from: 'jeff@test.local', to: ['reject@x.test'] }, msg('a4'), t)));
+  const d1 = await raw('saveDraft', { imap, messageId: '<d1@test.local>' }, msg('d1'), t);
+  console.log('draft1:', JSON.stringify(d1));
+  const d2 = await raw('saveDraft', { imap, messageId: '<d2@test.local>', replace: d1 }, msg('d2'), t);
+  console.log('draft2:', JSON.stringify(d2));
+  const l = await json('list', { account: imap, folder: d2.folder }, t);
+  console.log('drafts folder:', l.messages.map(m => m.uid + ' ' + m.subject));
+  console.log('sent folder:', (await json('list', { account: imap, folder: 'Sent' }, t)).messages.map(m => m.subject));
+  const s3 = await raw('send', { smtp, imap, from: 'jeff@test.local', to: ['ann@friend.test'], draft: d2, replied: { folder: 'INBOX', uid: 1 } }, msg('a5'), t);
+  console.log('send+draft cleanup:', JSON.stringify(s3), 'drafts left', (await json('list', { account: imap, folder: d2.folder }, t)).total);
+  console.log('deleteDraft:', JSON.stringify(await json('deleteDraft', { account: imap, folder: 'Drafts', uid: 99999 }, t)));
+})();
