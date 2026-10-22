@@ -29,23 +29,28 @@ Files
   sw.js        lets the home-screen app start quickly; keeps only the
                app's own files, never mail or vault data (1.5.0)
   lib.php      shared code (database, checks, rate limiting)
-  config.php   your settings — includes the one-time SETUP CODE
-  web/         the web app (scripts, styles, icons, OpenPGP.js)
+  config.example.php  template for config.php — your settings, including
+               the one-time SETUP CODE (config.php itself is not in the
+               download, so an update can never overwrite yours)
+  web/        the web app (scripts, styles, icons, OpenPGP.js)
   .htaccess    blocks config/lib/imap/smtp.php, forces HTTPS, script types
                (some FTP programs hide files starting with a dot —
                 make sure it is uploaded)
 
 Updating from an earlier version
-  Upload everything into the same folder, replacing the old files —
-  EXCEPT config.php: keep the one already on your server.
+  Upload everything into the same folder, replacing the old files.
+  Keep the config.php already on your server (the download has none).
   Include the whole web/ folder. Your vault is untouched.
 
 New install
   1. Upload all files into one folder, e.g. public_html/mysite/SealPost/
-  2. Open https://<your-site>/<folder>/status.php — all lines green.
-  3. In Sealpost on your PC: Settings -> Sync with my web server ->
+  2. Copy config.example.php to config.php and change 'setup_code' to a
+     code only you know (any letters/numbers). Without config.php, vault
+     creation stays switched off.
+  3. Open https://<your-site>/<folder>/status.php — all lines green.
+  4. In Sealpost on your PC: Settings -> Sync with my web server ->
      Set up sync (address, username, vault passphrase, setup code).
-  4. Open https://<your-site>/<folder>/ and sign in.
+  5. Open https://<your-site>/<folder>/ and sign in.
 
 Good to know
   - Closing the browser tab signs you out; 30 minutes without activity

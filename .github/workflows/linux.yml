@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Tag of the release to attach the installers to (leave empty to only keep them as a build artifact)
-        default: SealPost
+        description: Tag of the release to attach the installers to, e.g. v1.10.0 (leave empty to only keep them as a build artifact)
+        default: ''
         required: false
 
 permissions:

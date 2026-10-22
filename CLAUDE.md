@@ -160,7 +160,10 @@ pass counts show up.
   GitHub Actions does it: `.github/workflows/linux.yml`, run by hand
   (`gh workflow run linux.yml -f release_tag=<tag>`). It runs the tests, builds
   the `.deb` + AppImage on Ubuntu 22.04 and attaches them to that release.
-- Releases so far: tag `SealPost` = "Seal Post 1.10.0" (Windows files + Linux installers).
+- Releases: one per desktop version, tag `v<desktop version>` (e.g. `v1.10.0`),
+  holding the Windows installer, the `.sealpost` update file, the Linux
+  `.deb` + AppImage, and `Sealpost-Web-Server-<server version>.zip` (built with
+  `git archive` from `sealpost-web/server`, so it never contains `config.php`).
 - **Server/web:** upload the changed files to the website folder. `status.php`
   should show all green and the new server version.
 - Changelogs: desktop → "Version history" in `sealpost/README.md`;
