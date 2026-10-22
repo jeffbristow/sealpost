@@ -116,7 +116,8 @@ sealpost-web/
    `server/README.txt`.
 3. **Desktop version bump:** `sealpost/package.json` `version`. Mark new code
    with `// x.y.z:` comments (the codebase's convention), add a test file
-   `test/vXYZ-test.js` and append it to the `test` script.
+   `test/vXYZ-test.js` and append it to the `test` script, and add an entry
+   to "Version history" in `sealpost/README.md`.
 4. **Never commit `sealpost-web/server/config.php`** (contains the setup code).
    Edit `config.example.php` for template changes. When deploying an update,
    upload everything except `config.php`, always the whole `web/` folder.
@@ -157,10 +158,11 @@ pass counts show up.
   auto-update feed (unlike Seal Chat).
 - **Server/web:** upload the changed files to the website folder. `status.php`
   should show all green and the new server version.
-- `sealpost/README.md`'s version history stops at 1.3.1. Later desktop
-  changes are only in code comments and in `server/README.txt`.
+- Changelogs: desktop → "Version history" in `sealpost/README.md`;
+  server/web → "New in x.y.z" in `sealpost-web/server/README.txt`. Update
+  the right one with every release.
 
-## Known gaps / open questions
+## Known gaps
 
-- License: the repo LICENSE is GPL-3.0, `sealpost/package.json` says MIT.
+- License is GPL-3.0 (`LICENSE`, `package.json` `"GPL-3.0-only"`).
 - No OAuth2 (Gmail/Microsoft need app passwords); no S/MIME; installer is not code-signed.

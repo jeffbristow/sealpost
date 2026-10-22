@@ -28,3 +28,7 @@ npm start
 4. In Sealpost on your PC: Settings → Sync with my web server → Set up sync.
 
 See [CLAUDE.md](CLAUDE.md) for the architecture and development notes.
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE).

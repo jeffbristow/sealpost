@@ -8,7 +8,7 @@
     "name": "Jeff",
     "email": "jeff@thebristows.com"
   },
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "scripts": {
     "start": "electron .",
     "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js",
