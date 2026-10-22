@@ -8,7 +8,7 @@ A PGP email system with two halves that share one encrypted "vault":
 
 | Part | Folder | Tech | Current version |
 |------|--------|------|-----------------|
-| **Sealpost** — desktop IMAP/SMTP client (Windows 11; Linux builds too) | `sealpost/` | Electron 44, Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.10.0) |
+| **Sealpost** — desktop IMAP/SMTP client (Windows 11, macOS 12+, Linux) | `sealpost/` | Electron 44 (macOS 12 build: Electron 43), Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.11.0) |
 | **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.10.0) |
 
 The two version numbers are independent. Features that need both say so
@@ -161,6 +161,16 @@ pass counts show up.
   Settings → About & updates → Install update file… (`bootstrap.js` runs the
   newest valid one; a broken update is marked bad and skipped). There is no
   auto-update feed (unlike Seal Chat).
+- **Mac installers** (1.11.0+): `.github/workflows/mac.yml`, run by hand
+  (`gh workflow run mac.yml -f release_tag=<tag>`) on a GitHub Mac. Two
+  builds × arm64/x64: regular (Electron from package.json, macOS 13+) and
+  `macOS12` (Electron 43.x installed `--no-save`, `LSMinimumSystemVersion 12.0`).
+  Ad-hoc signed (`mac.identity "-"`, no Apple account); the workflow checks
+  `codesign --verify`, the minimum macOS and the bundled Electron version.
+  Mac-specific code: `macMenu()` in main.js (menu bar; Select All asks the
+  window), `MOD(e)` in renderer app.js (⌘ = Ctrl; not for Q). Nobody here can
+  run the Mac app — Jeff tests it on his Mac. When Electron 43 stops getting
+  security fixes, decide whether to keep supporting macOS 12.
 - **Linux installers** can't be built on this Windows PC (no WSL/Docker).
   GitHub Actions does it: `.github/workflows/linux.yml`, run by hand
   (`gh workflow run linux.yml -f release_tag=<tag>`). It runs the tests, builds

@@ -2,7 +2,7 @@
 
 Sealpost is a desktop email client with OpenPGP built in: key generation and
 management, signing, encrypting, decrypting and verifying — alongside normal
-IMAP/SMTP email. It runs on Windows 11 and Linux, and can sync with your own
+IMAP/SMTP email. It runs on Windows 11, macOS 12+ and Linux, and can sync with your own
 **Sealpost Server**, which also gives you **Sealpost Web** (webmail with the
 same PGP features, installable on an iPhone home screen). See
 [`../sealpost-web/server/README.txt`](../sealpost-web/server/README.txt).
@@ -20,6 +20,25 @@ same PGP features, installable on an iPhone home screen). See
 - `.deb` (Ubuntu, Debian, Mint): `sudo apt install ./Sealpost-<version>-amd64.deb`
 - AppImage (any distribution): make `Sealpost-<version>-x86_64.AppImage`
   executable and run it.
+
+**Mac**
+| Your Mac | File |
+|----------|------|
+| macOS 13 Ventura or newer, Apple Silicon (M1/M2/M3/M4…) | `Sealpost-<version>-arm64.dmg` |
+| macOS 13 Ventura or newer, Intel | `Sealpost-<version>-x64.dmg` |
+| macOS 12 Monterey, Apple Silicon | `Sealpost-<version>-macOS12-arm64.dmg` |
+| macOS 12 Monterey, Intel | `Sealpost-<version>-macOS12-x64.dmg` |
+
+(Apple menu → About This Mac shows your macOS version and chip.)
+1. Open the .dmg and drag **Sealpost** onto **Applications**.
+2. Open Sealpost from Applications. The app isn't signed with an Apple
+   Developer certificate, so macOS says it can't check it — click **Done** / **OK**.
+3. **System Settings → Privacy & Security**, scroll down to "Sealpost was
+   blocked…" and click **Open Anyway** (on macOS 12: right-click Sealpost in
+   Applications → **Open** → **Open**). Only needed the first time.
+
+The macOS 12 build uses an older Electron (43), because Electron 44 needs
+macOS 13. Both builds take the same `.sealpost` update files.
 
 ## Updating (no reinstall)
 
@@ -74,13 +93,15 @@ same PGP features, installable on an iPhone home screen). See
 Keyboard: `Ctrl+N` new message · `Ctrl+R` reply · `Ctrl+Enter` send ·
 `Del` delete · `Ctrl+Q` / `Ctrl+U` mark read / unread · `Ctrl+A` select all ·
 `Esc` clear selection · `↑/↓` or `j/k` next/previous · `F5` refresh.
+On a Mac, `⌘` works in place of `Ctrl` (except `⌘Q`, which quits — use `Ctrl+Q`
+to mark read), and `⌘,` opens Settings.
 
 ## Where your data lives
 
-Windows: `%APPDATA%\Sealpost\` · Linux: `~/.config/Sealpost/`
+Windows: `%APPDATA%\Sealpost\` · Mac: `~/Library/Application Support/Sealpost/` · Linux: `~/.config/Sealpost/`
 - `sealpost.json` — accounts and settings. Passwords are encrypted with
-  Windows DPAPI (your Windows login) or, on Linux, your login keyring
-  (GNOME Keyring / KDE Wallet).
+  Windows DPAPI (your Windows login), the Mac Keychain, or on Linux your
+  login keyring (GNOME Keyring / KDE Wallet).
 - `contacts.json` — contacts
 - `keyring\public\` — public keys
 - `keyring\private\` — your secret keys, always passphrase-encrypted, plus revocation certificates
@@ -111,6 +132,7 @@ npm start              # run without installing
 npm run dist           # Windows installer -> dist\Sealpost Setup <version>.exe
 npm run dist:portable  # single portable .exe, no install
 npm run dist:linux     # AppImage + .deb
+npm run dist:mac       # .dmg for Apple Silicon + Intel (on a Mac; releases use .github/workflows/mac.yml)
 npm run update-file    # dist\update\Sealpost-<version>.sealpost (+ the 1.0.0 update zip)
 ```
 
@@ -140,6 +162,7 @@ test/                  Self-tests (pgp-test.js + one per feature release)
 
 ## Version history
 
+- **1.11.0** — **Mac**: Sealpost for macOS 13+ and, as a separate build, macOS 12 (Apple Silicon and Intel). The standard Mac menu bar (⌘C / ⌘V / ⌘Z / ⌘Q, ⌘, for Settings); ⌘ works in place of Ctrl in Sealpost's shortcuts, and ⌘-click selects messages. Passwords are kept with the Mac Keychain. Windows and Linux: no changes besides the version number.
 - **1.10.0** — New: **folder management** (new folder / subfolder, rename, move, delete; Inbox, Sent, Drafts, Trash etc. are protected), **pinned folders** under Favorites, drag messages onto a folder to move them. **All Inboxes** (2+ accounts): every Inbox in one list; replies go out from the right account. **Conversation view**, per account and off unless turned on: replies are grouped under one line. Pins and the conversation switch sync with Sealpost Web (server 1.8.0+).
 - **1.9.2** — Folders and the first page of messages saved for Offline mail show instantly; the server's up-to-date list replaces them a moment later.
 - **1.9.1** — Fix: folders are shown in their real hierarchy (subfolders under their parent; container folders that hold only other folders can't be opened). The Move list is indented the same way.

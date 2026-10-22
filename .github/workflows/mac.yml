@@ -1,0 +1,92 @@
+# Builds the Mac installers (.dmg) of the Sealpost desktop app on a GitHub
+# Mac, and attaches them to a GitHub release. Two builds:
+#   regular  Electron 44 (package.json), macOS 13 Ventura or newer
+#   macos12  Electron 43 (Electron 44 dropped macOS 12 Monterey)
+# Each for Apple Silicon (arm64) and Intel (x64). Ad-hoc signed (no Apple
+# Developer account), so the first start needs "Open Anyway".
+# Run it from the Actions tab → "Mac installers" → Run workflow.
+name: Mac installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag of the release to attach the installers to, e.g. v1.11.0 (leave empty to only keep them as a build artifact)
+        default: ''
+        required: false
+
+permissions:
+  contents: write   # needed to attach files to the release
+
+jobs:
+  build:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: regular
+            minimum: '13.0'
+            electron: ''           # the version in package.json
+            name: 'Sealpost-${version}-${arch}.dmg'
+          - flavor: macos12
+            minimum: '12.0'
+            electron: '43.8.3'
+            name: 'Sealpost-${version}-macOS12-${arch}.dmg'
+    defaults:
+      run:
+        working-directory: sealpost
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sealpost/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Use Electron ${{ matrix.electron }} (macOS 12 build)
+        if: matrix.electron != ''
+        run: npm install --no-save "electron@${{ matrix.electron }}"
+
+      - name: Self-tests
+        run: npm test
+
+      - name: Build .dmg (Apple Silicon + Intel)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: >
+          npx electron-builder --mac dmg --x64 --arm64 --publish never
+          -c.mac.minimumSystemVersion=${{ matrix.minimum }}
+          '-c.dmg.artifactName=${{ matrix.name }}'
+
+      - name: Check the apps (signature, minimum macOS, Electron version)
+        run: |
+          set -e
+          want_electron=$(node -p "require('electron/package.json').version")
+          for app in dist/mac/Sealpost.app dist/mac-arm64/Sealpost.app; do
+            codesign --verify --deep --strict "$app"
+            min=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")
+            ele=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Frameworks/Electron Framework.framework/Resources/Info.plist")
+            echo "$app: signature OK, LSMinimumSystemVersion=$min, Electron=$ele"
+            [ "$min" = "${{ matrix.minimum }}" ] || { echo "wrong minimum macOS"; exit 1; }
+            [ "$ele" = "$want_electron" ] || { echo "wrong Electron (want $want_electron)"; exit 1; }
+          done
+          ls -la dist/*.dmg
+
+      - name: Keep the installers as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sealpost-mac-${{ matrix.flavor }}
+          path: sealpost/dist/*.dmg
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: gh release upload "$TAG" dist/*.dmg --clobber

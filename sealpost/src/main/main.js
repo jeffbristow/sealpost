@@ -42,6 +42,7 @@ const openMessages = new Map(); // "acc|folder|uid" -> view incl. attachment byt
 /* =================================================================
  * 1. STARTUP, WINDOW, SECURITY
  * ================================================================= */
+const IS_MAC = process.platform === 'darwin';   // 1.11.0
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 app.setAppUserModelId('com.sealpost.mail');
@@ -353,7 +354,7 @@ function createWindow() {
       spellcheck: true
     }
   });
-  Menu.setApplicationMenu(null);
+  Menu.setApplicationMenu(IS_MAC ? macMenu() : null);   // 1.11.0: a Mac needs its menu bar (⌘C / ⌘V / ⌘Q …)
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   // Links (including those inside emails) open in the real browser, never in-app
@@ -367,6 +368,31 @@ function createWindow() {
   win.webContents.on('before-input-event', (e, input) => {
     if (input.control && input.shift && input.key.toLowerCase() === 'i' && !appLocked) win.webContents.toggleDevTools();
   });
+}
+
+/* ---------- 1.11.0: the Mac menu bar ----------
+ * Without one, macOS has no ⌘C / ⌘V / ⌘A / ⌘Z / ⌘Q. Select All asks the
+ * window first, so ⌘A in the message list selects messages (as Ctrl+A does). */
+function macMenu() {
+  const toWindow = type => () => sendEvent('menu', type);
+  return Menu.buildFromTemplate([
+    { label: 'Sealpost', submenu: [
+      { role: 'about', label: 'About Sealpost' },
+      { type: 'separator' },
+      { label: 'Settings…', accelerator: 'Cmd+,', click: toWindow('settings') },
+      { type: 'separator' },
+      { role: 'hide', label: 'Hide Sealpost' }, { role: 'hideOthers' }, { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit', label: 'Quit Sealpost' }
+    ] },
+    { label: 'Edit', submenu: [
+      { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+      { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'delete' },
+      { label: 'Select All', accelerator: 'Cmd+A', click: () => (appLocked ? win && win.webContents.selectAll() : sendEvent('menu', 'selectAll')) }
+    ] },
+    { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
+    { role: 'windowMenu' }
+  ]);
 }
 
 app.whenReady().then(async () => {

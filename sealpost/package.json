@@ -1,7 +1,7 @@
 {
   "name": "sealpost",
   "productName": "Sealpost",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Desktop email client with built-in OpenPGP encryption, signing and key management",
   "main": "src/main/bootstrap.js",
   "author": {
@@ -15,7 +15,8 @@
     "dist": "electron-builder --win nsis --x64 --publish never",
     "dist:portable": "electron-builder --win portable --x64 --publish never",
     "update-file": "node build/make-update.js",
-    "dist:linux": "electron-builder --linux AppImage deb --x64 --publish never"
+    "dist:linux": "electron-builder --linux AppImage deb --x64 --publish never",
+    "dist:mac": "electron-builder --mac dmg --x64 --arm64 --publish never"
   },
   "dependencies": {
     "imapflow": "^1.0.170",
@@ -98,6 +99,21 @@
     },
     "appImage": {
       "artifactName": "Sealpost-${version}-x86_64.AppImage"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "13.0"
+    },
+    "dmg": {
+      "artifactName": "Sealpost-${version}-${arch}.dmg",
+      "title": "Sealpost ${version}"
     }
   },
   "homepage": "https://jeffbristow.com/mysite/SealPost/",

@@ -32,6 +32,8 @@ const show = (el, on = true) => el.classList.toggle('hidden', !on);
  * ~/.config, so a few phrases are swapped when the page loads and in
  * dialogs. On Windows nothing changes. */
 const PLATFORM = (window.api && window.api.platform) || 'win32';
+// 1.11.0: shortcuts written as Ctrl+… also work with ⌘ on a Mac
+const MOD = e => e.ctrlKey || (PLATFORM === 'darwin' && e.metaKey);
 const OS_WORDS = PLATFORM === 'win32' ? [] : [
   [/%APPDATA%\\Sealpost/g, PLATFORM === 'darwin' ? '~/Library/Application Support/Sealpost' : '~/.config/Sealpost'],
   [/default Windows program/g, 'default program'],
@@ -681,7 +683,7 @@ function renderList() {
     el.ondragend = () => { dragInfo = null; $$('.folder.drop').forEach(x => x.classList.remove('drop')); };
     el.onclick = e => {
       // 1.7.0: tick box, Ctrl-click, Shift-click (and select mode) select instead of opening
-      if (e.target.closest('.sel-box') || e.ctrlKey || e.shiftKey || state.selectMode || state.selected.size) {
+      if (e.target.closest('.sel-box') || MOD(e) || e.shiftKey || state.selectMode || state.selected.size) {
         if (t) { const on = !allSel; for (const k of keys) on ? state.selected.add(k) : state.selected.delete(k); renderList(); return; }
         if (e.shiftKey && state.anchor != null) selectRange(state.anchor, m.uid); else toggleSelect(m.uid);
         return;
@@ -2982,6 +2984,18 @@ $('#aCloudBtn').addEventListener('click', () => { closeModal('#acctModal'); swit
 
 /* ---------- Events from the main process ---------- */
 window.api.onEvent(async ({ type, data }) => {
+  // 1.11.0: Mac menu bar — Settings… (⌘,) and Select All (⌘A: messages in the list, else the text)
+  if (type === 'menu') {
+    if (data === 'settings') { switchView('settings'); return; }
+    if (data === 'selectAll') {
+      const el = document.activeElement;
+      const typing = el && (/INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.isContentEditable);
+      const modalOpen = $$('.modal').some(m => !m.classList.contains('hidden'));
+      if (!typing && !modalOpen && $('#view-mail').classList.contains('active') && state.messages.length) selectAll();
+      else document.execCommand('selectAll');
+    }
+    return;
+  }
   if (type === 'cloudsync') {
     if ($('#view-settings').classList.contains('active')) renderCloudPanel();
     if (!data.running && data.needs && !cloudNagShown) {
@@ -3192,19 +3206,19 @@ document.addEventListener('keydown', e => {
     else if (open && open.id === 'composeModal') closeComposer();    // composer: save draft / discard
     else if (open) open.classList.add('hidden');
   }
-  if (e.ctrlKey && e.key === 'Enter' && !$('#composeModal').classList.contains('hidden')) { e.preventDefault(); sendMessage(); }
+  if (MOD(e) && e.key === 'Enter' && !$('#composeModal').classList.contains('hidden')) { e.preventDefault(); sendMessage(); }
   if (modalOpen || typing) return;
   if (e.key === 'F5') { e.preventDefault(); refreshAll(); }
-  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); openComposer(); }
+  if (MOD(e) && e.key.toLowerCase() === 'n') { e.preventDefault(); openComposer(); }
   if (!$('#view-mail').classList.contains('active')) return;
   // 1.7.0: Ctrl+A selects all, Esc clears, Delete works on the selection
-  if (e.ctrlKey && e.key.toLowerCase() === 'a' && state.messages.length) { e.preventDefault(); selectAll(); return; }
+  if (MOD(e) && e.key.toLowerCase() === 'a' && state.messages.length) { e.preventDefault(); selectAll(); return; }
   if (e.key === 'Escape' && (state.selected.size || state.selectMode)) { clearSelection(); return; }
   if (e.key === 'Delete' && state.selected.size) { bulkDelete([...state.selected]); return; }
   if (e.key === 'Delete') deleteSelected();
   // 1.6.0: Ctrl+Q read, Ctrl+U unread (as in Outlook)
   if (e.ctrlKey && (e.key.toLowerCase() === 'q' || e.key.toLowerCase() === 'u') && state.selectedUid) { e.preventDefault(); setSeen([state.selectedUid], e.key.toLowerCase() === 'q'); }
-  if (e.ctrlKey && e.key.toLowerCase() === 'r' && state.view) { e.preventDefault(); openComposer({ mode: 'reply', view: state.view }); }
+  if (MOD(e) && e.key.toLowerCase() === 'r' && state.view) { e.preventDefault(); openComposer({ mode: 'reply', view: state.view }); }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'j' || e.key === 'k') {
     const order = state.visible || state.messages.map(m => m.uid);   // 1.10.0: what the list shows
     const i = order.indexOf(state.selectedUid);
