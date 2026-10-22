@@ -52,17 +52,27 @@ jobs:
         if: matrix.electron != ''
         run: npm install --no-save "electron@${{ matrix.electron }}"
 
+      # written into package.json (not passed as -c.… on the command line, which turns "12.0" into the number 12)
+      - name: Build settings for this flavor
+        env:
+          MINIMUM: ${{ matrix.minimum }}
+          NAME: ${{ matrix.name }}
+        run: |
+          node -e "
+            const fs = require('fs'), p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            p.build.electronVersion = require('electron/package.json').version;
+            p.build.mac.minimumSystemVersion = process.env.MINIMUM;
+            p.build.dmg.artifactName = process.env.NAME;
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2));
+            console.log('Electron', p.build.electronVersion, '· macOS', p.build.mac.minimumSystemVersion, '+ ·', p.build.dmg.artifactName);"
+
       - name: Self-tests
         run: npm test
 
       - name: Build .dmg (Apple Silicon + Intel)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: >
-          npx electron-builder --mac dmg --x64 --arm64 --publish never
-          "-c.electronVersion=$(node -p "require('electron/package.json').version")"
-          -c.mac.minimumSystemVersion=${{ matrix.minimum }}
-          '-c.dmg.artifactName=${{ matrix.name }}'
+        run: npx electron-builder --mac dmg --x64 --arm64 --publish never
 
       - name: Check the apps (signature, minimum macOS, Electron version)
         run: |
