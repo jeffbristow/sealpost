@@ -1,0 +1,55 @@
+# Builds the Linux installers (.deb + AppImage) of the Sealpost desktop app
+# on a GitHub Linux machine, and attaches them to a GitHub release.
+# Run it from the Actions tab → "Linux installers" → Run workflow.
+name: Linux installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag of the release to attach the installers to (leave empty to only keep them as a build artifact)
+        default: SealPost
+        required: false
+
+permissions:
+  contents: write   # needed to attach files to the release
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04   # older glibc, so the packages run on more distributions
+    defaults:
+      run:
+        working-directory: sealpost
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sealpost/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Self-tests
+        run: npm test
+
+      - name: Build .deb and AppImage
+        run: npm run dist:linux
+
+      - name: Keep the installers as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sealpost-linux
+          path: |
+            sealpost/dist/*.deb
+            sealpost/dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: gh release upload "$TAG" dist/*.deb dist/*.AppImage --clobber

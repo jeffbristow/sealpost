@@ -156,6 +156,11 @@ pass counts show up.
   Settings → About & updates → Install update file… (`bootstrap.js` runs the
   newest valid one; a broken update is marked bad and skipped). There is no
   auto-update feed (unlike Seal Chat).
+- **Linux installers** can't be built on this Windows PC (no WSL/Docker).
+  GitHub Actions does it: `.github/workflows/linux.yml`, run by hand
+  (`gh workflow run linux.yml -f release_tag=<tag>`). It runs the tests, builds
+  the `.deb` + AppImage on Ubuntu 22.04 and attaches them to that release.
+- Releases so far: tag `SealPost` = "Seal Post 1.10.0" (Windows files + Linux installers).
 - **Server/web:** upload the changed files to the website folder. `status.php`
   should show all green and the new server version.
 - Changelogs: desktop → "Version history" in `sealpost/README.md`;
