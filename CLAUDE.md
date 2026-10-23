@@ -2,6 +2,39 @@
 
 Guidance for Claude Code when working on Sealpost. Read this first.
 
+## The purpose (everything else serves this)
+
+Sealpost is **one PGP mail setup that follows you across devices**: an IMAP
+client with an excellent OpenPGP implementation, plus a web interface, where
+**settings, accounts, contacts and PGP keys stay in sync between every client**.
+A user should be able to jump between their Windows PC, Mac, Linux machine,
+browser and iPhone with minimal effort and still encrypt, decrypt, sign and
+verify everywhere.
+
+So for every client that exists or gets added (Windows, macOS 12/13+, Linux,
+Sealpost Web, the iPhone home-screen app, anything future):
+- **It joins the same vault.** It speaks the vault protocol exactly
+  (`sync.js` ⇄ `web/vault.js` ⇄ `api.php`): same key derivation, same
+  `v1.` AES-GCM items with the item id as AAD, same item envelope
+  `{ v, id, type, updated, device, data }`, same item types. No
+  client-only formats.
+- **Everything that makes PGP work syncs**: keys (secret keys still under
+  their own passphrase), passphrases marked "remember on all my devices",
+  contacts with their pinned keys and encrypt/sign rules, accounts, settings.
+  Mail written or drafted on one client must open on every other (shared
+  PGP/MIME + draft formats — see rule 1 below).
+- **Device-specific things stay out of the vault**: only `LOCAL_SETTINGS`
+  (app lock, offline cache, backup date, Windows shortcut icon, sync state)
+  and each device's own secure storage (DPAPI / Keychain / Linux keyring).
+  Never put an OS-specific value (a file path, a Windows-only option) in a
+  synced item — another OS will receive it.
+- **`sealpost/test/clients-test.js` must pass** (desktop and web open each
+  other's vault items; same per-device settings list). A new client gets
+  added to it. Features that need a minimum version of another client say so
+  (e.g. "syncs with Sealpost Web 1.8.0+").
+- When in doubt, ask "can a user who switches devices right now still
+  decrypt and keep working?" If not, it isn't done.
+
 ## What Sealpost is
 
 A PGP email system with two halves that share one encrypted "vault":
