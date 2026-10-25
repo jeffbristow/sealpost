@@ -200,8 +200,13 @@ New in 1.10.0 — one-click updates
     are one click.
   - Also: status.php has a "One-click updates" line.
 
+New in 1.10.1
+  - Example addresses in this README and in Settings -> Mail accounts
+    -> "Send as" now use example.com.
+  - Downloads and updates: https://github.com/jeffbristow/sealpost/releases
+
 Quick test after updating (5 minutes)
-  [ ] status.php shows all green and "Server version 1.10.0"
+  [ ] status.php shows all green and "Server version 1.10.1"
   [ ] Sign in; Settings -> Mail accounts -> Edit -> Test connection
       says "Receiving and sending both work"
   [ ] Keys -> Find online… -> your own address finds your key (if you

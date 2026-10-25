@@ -24,16 +24,16 @@
  * settings.js, small shared helpers in ui.js.
  * ===================================================================== */
 
-import * as vault from './vault.js?v=1.10.0';
-import { Keyring } from './pgp.js?v=1.10.0';
-import { readMessage } from './reader.js?v=1.10.0';
-import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.10.0';
-import { initComposer } from './composer.js?v=1.10.0';
-import { initPeople } from './people.js?v=1.10.0';
-import { initTools } from './tools.js?v=1.10.0';
-import { initSettings } from './settings.js?v=1.10.0';
-import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.10.0';   // 1.6.0
-import { initUpdates } from './update.js?v=1.10.0';   // 1.10.0
+import * as vault from './vault.js?v=1.10.1';
+import { Keyring } from './pgp.js?v=1.10.1';
+import { readMessage } from './reader.js?v=1.10.1';
+import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.10.1';
+import { initComposer } from './composer.js?v=1.10.1';
+import { initPeople } from './people.js?v=1.10.1';
+import { initTools } from './tools.js?v=1.10.1';
+import { initSettings } from './settings.js?v=1.10.1';
+import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.10.1';   // 1.6.0
+import { initUpdates } from './update.js?v=1.10.1';   // 1.10.0
 
 /* =================================================================
  * 1. STATE + CONTEXT
