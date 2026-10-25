@@ -104,7 +104,7 @@ function stable(v) {
 }
 const hashOf = data => (data == null ? null : crypto.createHash('sha256').update(stable(data)).digest('hex'));
 
-/** "jeffbristow.com/mysite/SealPost" -> "https://jeffbristow.com/mysite/SealPost/api.php" */
+/** "example.com/sealpost" -> "https://example.com/sealpost/api.php" */
 function normalizeServer(input) {
   let s = String(input || '').trim();
   if (!s) throw new Error('Enter your server address');

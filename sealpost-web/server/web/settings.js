@@ -143,7 +143,7 @@ export function initSettings(ctx) {
         <label class="check"><input type="checkbox" id="aConv" ${v.conversationView ? 'checked' : ''}> Conversation view — group replies with the message they answer (this account only)</label>
         <label for="aSig">Signature (added to new messages)</label><textarea id="aSig" rows="3">${esc(v.signature || '')}</textarea>
         <label for="aAliases">"Send as" addresses (optional, one per line)</label>
-        <textarea id="aAliases" rows="3" spellcheck="false" placeholder="Jeff Bristow <jeff@jeffbristow.com>">${esc((v.aliases || []).map(x => x.name ? `${x.name} <${x.email}>` : x.email).join('\n'))}</textarea>
+        <textarea id="aAliases" rows="3" spellcheck="false" placeholder="Your Name <you@example.com>">${esc((v.aliases || []).map(x => x.name ? `${x.name} <${x.email}>` : x.email).join('\n'))}</textarea>
         <p class="muted small">Other addresses this mailbox may send from — e.g. Zoho Mail → Settings → Mail Accounts → "Send mail as". Set them up there first; they then appear in the From list.</p>
         <div class="row-btns"><button class="btn small" id="aTest" type="button">Test connection</button><span id="aResult" class="small muted"></span></div>
         <p id="aErr" class="error"></p>`,

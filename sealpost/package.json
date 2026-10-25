@@ -1,7 +1,7 @@
 {
   "name": "sealpost",
   "productName": "Sealpost",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Desktop email client with built-in OpenPGP encryption, signing and key management",
   "main": "src/main/bootstrap.js",
   "author": {
@@ -11,7 +11,7 @@
   "license": "GPL-3.0-only",
   "scripts": {
     "start": "electron .",
-    "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js && node test/server-update-test.js && node test/clients-test.js",
+    "test": "node test/pgp-test.js && node test/v110-test.js && node test/v120-test.js && node test/v130-test.js && node test/v140-test.js && node test/v150-test.js && node test/v190-test.js && node test/v191-test.js && node test/server-update-test.js && node test/clients-test.js && node test/update-check-test.js",
     "dist": "electron-builder --win nsis --x64 --publish never",
     "dist:portable": "electron-builder --win portable --x64 --publish never",
     "update-file": "node build/make-update.js",
@@ -116,6 +116,6 @@
       "title": "Sealpost ${version}"
     }
   },
-  "homepage": "https://jeffbristow.com/mysite/SealPost/",
+  "homepage": "https://github.com/jeffbristow/sealpost",
   "desktopName": "sealpost.desktop"
 }

@@ -41,7 +41,7 @@ A PGP email system with two halves that share one encrypted "vault":
 
 | Part | Folder | Tech | Current version |
 |------|--------|------|-----------------|
-| **Sealpost** — desktop IMAP/SMTP client (Windows 11, macOS 12+, Linux) | `sealpost/` | Electron 44 (macOS 12 build: Electron 43), Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.11.0) |
+| **Sealpost** — desktop IMAP/SMTP client (Windows 11, macOS 12+, Linux) | `sealpost/` | Electron 44 (macOS 12 build: Electron 43), Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.12.0) |
 | **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.10.0) |
 
 The two version numbers are independent. Features that need both say so
@@ -50,8 +50,10 @@ The two version numbers are independent. Features that need both say so
 Originally written with Claude on the web (claude.ai). Its sandbox paths
 (`/home/claude/...`) still appear in `sealpost-web/devtest/`.
 
-Live install: https://jeffbristow.com/mysite/SealPost/ (cPanel/Apache,
-vault in `/home/jeffbris/sealpost-data/`). The live server files are **not**
+Don't put the maintainer's personal website, live install address or
+server paths in the repo (code, examples, READMEs, tests) — it's public. Use
+`example.com` in examples; links for downloads/updates go to GitHub
+(`github.com/jeffbristow/sealpost/releases`). The live server files are **not**
 mirrored in `C:\claude\Server_Copy`; this repo is the source of truth.
 
 ## Repository layout
@@ -73,6 +75,7 @@ sealpost/                  desktop app
     backup.js              .sealbackup (an OpenPGP symmetric message containing JSON)
     applock.js             PIN (scrypt) + Windows Hello via PowerShell
     asarinfo.js            reads package.json from an update file without locking it (EBUSY fix)
+    updatecheck.js         "Check for updates": newest desktop release on GitHub + download (1.12.0)
     presets.js             provider server presets
   src/renderer/            UI: index.html, styles.css, app.js (one large file, ~3200 lines)
   build/                   icons, afterPack.js (stamps icon/version into the .exe),
@@ -190,10 +193,15 @@ pass counts show up.
 
 ## Releases
 
-- **Desktop updates are manual and unsigned:** users pick a `.sealpost` file in
-  Settings → About & updates → Install update file… (`bootstrap.js` runs the
-  newest valid one; a broken update is marked bad and skipped). There is no
-  auto-update feed (unlike Seal Chat).
+- **Desktop updates are unsigned and come from GitHub releases** (1.12.0+):
+  Settings → About & updates → Check for updates (`updatecheck.js`) reads
+  `api.github.com/repos/jeffbristow/sealpost/releases`, takes the newest
+  non-draft, non-prerelease `v<x.y.z>` tag (`server-v…` tags are ignored),
+  and downloads its `Sealpost-<x.y.z>.sealpost` asset — so every desktop
+  release MUST attach that file under exactly that name. Only on click; no
+  background checks. Install update file… still takes a file picked by hand
+  (`bootstrap.js` runs the newest valid one; a broken update is marked bad
+  and skipped).
 - **Mac installers** (1.11.0+): `.github/workflows/mac.yml`, run by hand
   (`gh workflow run mac.yml -f release_tag=<tag>`) on a GitHub Mac. Two
   builds × arm64/x64: regular (Electron from package.json, macOS 13+) and

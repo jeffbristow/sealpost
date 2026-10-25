@@ -43,9 +43,9 @@ return [
      *    Folder that holds vault.sqlite (everything in it is encrypted
      *    by Sealpost before it is sent here).
      *    '' = automatic: a folder named "sealpost-data" one level ABOVE
-     *         your public web folder, e.g. /home/jeffbris/sealpost-data
+     *         your public web folder, e.g. /home/username/sealpost-data
      *         — it can never be downloaded through the website.
-     *    Or give a full path, e.g. '/home/jeffbris/sealpost-data'.
+     *    Or give a full path, e.g. '/home/username/sealpost-data'.
      * --------------------------------------------------------------- */
     'data_dir' => '',
 

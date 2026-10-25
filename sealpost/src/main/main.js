@@ -31,6 +31,7 @@ const backupLib = require('./backup');             // 1.2.0
 const { CacheStore } = require('./cache');          // 1.3.0
 const { SyncService } = require('./sync');          // 1.4.0
 const presets = require('./presets');
+const updateCheck = require('./updatecheck');      // 1.12.0
 const { readPackageJson, fs: ofs } = require('./asarinfo'); // lock-free update reading (1.0.3)
 
 let win, store, pgp, mail, contacts, cache, cloud;
@@ -801,28 +802,19 @@ function registerIpc() {
   /* ---------- App version + in-app updates (added 1.0.1) ----------
    * An update file (.sealpost) is the app's code package. It is checked,
    * copied to %APPDATA%\Sealpost\updates\, and loaded by bootstrap.js on
-   * the next start. Your accounts, settings and keys are not touched. */
+   * the next start. Your accounts, settings and keys are not touched.
+   * 1.12.0: "Check for updates" finds and downloads it from GitHub. */
   handle('app:info', () => ({
     version: process.env.SEALPOST_RUNNING_VERSION || app.getVersion(),
     installedVersion: app.getVersion(),
     fromUpdate: !!process.env.SEALPOST_UPDATE_FILE
   }));
 
-  handle('app:installUpdate', async () => {
-    const r = await dialog.showOpenDialog(win, {
-      title: 'Choose a Sealpost update file',
-      properties: ['openFile'],
-      filters: [{ name: 'Sealpost update', extensions: ['sealpost'] }]
-    });
-    if (r.canceled || !r.filePaths[0]) return null;
-
-    const dir = path.join(app.getPath('userData'), 'updates');
-    fs.mkdirSync(dir, { recursive: true });
-    // 1.0.3 FIX (EBUSY on Windows): copy to a temporary .tmp name and read it with
-    // asarinfo.js, which closes the file right away. Electron's own asar reader kept
-    // the file open, so Windows refused to rename it.
-    const incoming = path.join(dir, 'incoming-' + Date.now() + '.tmp');
-    ofs.copyFileSync(r.filePaths[0], incoming);
+  // 1.12.0: the checks + install step, shared by "Install update file…" and
+  // "Check for updates" (which downloads the file from GitHub first).
+  // <incoming> is a temporary file in the updates folder; it is moved or deleted.
+  function installUpdateFrom(incoming) {
+    const dir = path.dirname(incoming);
     let pkg;
     try {
       pkg = readPackageJson(incoming);
@@ -847,7 +839,43 @@ function registerIpc() {
       ofs.writeFileSync(badFile, JSON.stringify(bad));
     } catch { /* none */ }
     return { version: pkg.version, from: current };
+  }
+
+  const updatesDir = () => {
+    const dir = path.join(app.getPath('userData'), 'updates');
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  };
+
+  handle('app:installUpdate', async () => {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose a Sealpost update file',
+      properties: ['openFile'],
+      filters: [{ name: 'Sealpost update', extensions: ['sealpost'] }]
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    // 1.0.3 FIX (EBUSY on Windows): copy to a temporary .tmp name and read it with
+    // asarinfo.js, which closes the file right away. Electron's own asar reader kept
+    // the file open, so Windows refused to rename it.
+    const incoming = path.join(updatesDir(), 'incoming-' + Date.now() + '.tmp');
+    ofs.copyFileSync(r.filePaths[0], incoming);
+    return installUpdateFrom(incoming);
   });
+
+  // 1.12.0: updates come from the GitHub releases (updatecheck.js)
+  handle('app:checkUpdate', () => updateCheck.checkForUpdate({ current: process.env.SEALPOST_RUNNING_VERSION || app.getVersion() }));
+
+  handle('app:downloadUpdate', async () => {
+    const info = await updateCheck.checkForUpdate({ current: process.env.SEALPOST_RUNNING_VERSION || app.getVersion() });
+    if (!info.newer) throw new Error(`You already have the newest version (${info.current}).`);
+    if (!info.file) throw new Error(`Version ${info.latest} has no update file. Download the installer from the release page instead.`);
+    const incoming = path.join(updatesDir(), 'incoming-' + Date.now() + '.tmp');
+    try { await updateCheck.downloadUpdate(info.file.url, incoming); }
+    catch (e) { try { ofs.unlinkSync(incoming); } catch { /* ignore */ } throw e; }
+    return installUpdateFrom(incoming);
+  });
+
+  handle('app:releasesPage', () => { shell.openExternal(updateCheck.RELEASES_PAGE); return true; });
 
   handle('app:restart', () => { app.relaunch(); app.exit(0); return true; });
 

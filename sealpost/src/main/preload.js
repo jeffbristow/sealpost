@@ -40,7 +40,9 @@ const channels = [
   // 1.9.2
   'mail:foldersCached', 'mail:listCached',
   // 1.10.0
-  'mail:renameFolder', 'mail:deleteFolder', 'accounts:setPrefs', 'mail:listUnified', 'mail:listUnifiedCached'
+  'mail:renameFolder', 'mail:deleteFolder', 'accounts:setPrefs', 'mail:listUnified', 'mail:listUnifiedCached',
+  // 1.12.0 updates from GitHub
+  'app:checkUpdate', 'app:downloadUpdate', 'app:releasesPage'
 ];
 
 const api = {};

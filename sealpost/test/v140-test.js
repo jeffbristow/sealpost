@@ -42,7 +42,7 @@ async function device(root, name) {
     for (let i = 0; i < 50; i++) { try { await fetch(url + 'api.php?action=ping'); break; } catch { await new Promise(r => setTimeout(r, 100)); } }
     const setupCode = (fs.readFileSync(path.join(www, 'config.php'), 'utf8').match(/'setup_code'\s*=>\s*'([^']+)'/) || [])[1];
 
-    ok(normalizeServer('jeffbristow.com/mysite/SealPost') === 'https://jeffbristow.com/mysite/SealPost/api.php', 'server address normalised');
+    ok(normalizeServer('example.com/sealpost') === 'https://example.com/sealpost/api.php', 'server address normalised');
     assert.throws(() => normalizeServer('http://example.com/'), /https/);
     ok(true, 'plain http refused for remote servers');
 

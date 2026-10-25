@@ -250,8 +250,13 @@
       <div class="panel">
         <h3 style="margin-top:0">About &amp; updates</h3>
         <p>Sealpost version <b id="appVersion">…</b></p>
-        <p class="muted small">To apply a fix, choose a <b>.sealpost</b> update file. Your accounts, settings and PGP keys are kept. Sealpost restarts to finish.</p>
-        <div class="row gap"><button id="btnInstallUpdate" class="btn primary">Install update file…</button></div>
+        <p class="muted small">Updates are published on GitHub. <b>Check for updates</b> looks for a newer version and can download and install it. Or choose a <b>.sealpost</b> update file you downloaded. Your accounts, settings and PGP keys are kept. Sealpost restarts to finish.</p>
+        <div class="row gap">
+          <button id="btnCheckUpdate" class="btn primary">Check for updates</button>
+          <button id="btnInstallUpdate" class="btn">Install update file…</button>
+          <button id="btnReleasesPage" class="btn">Releases on GitHub</button>
+        </div>
+        <p id="updateStatus" class="muted small"></p>
       </div>
     </div>
   </section>
@@ -387,7 +392,7 @@
       <div class="full-col"><label>Signature (appended to new messages)</label><textarea id="aSig" rows="3"></textarea></div>
       <!-- 1.9.0: other addresses this mailbox may send as -->
       <div class="full-col"><label>"Send as" addresses (optional, one per line)</label>
-        <textarea id="aAliases" rows="3" spellcheck="false" placeholder="Jeff Bristow <jeff@jeffbristow.com>"></textarea>
+        <textarea id="aAliases" rows="3" spellcheck="false" placeholder="Your Name <you@example.com>"></textarea>
         <p class="muted small">Other addresses this mailbox is allowed to send from — e.g. Zoho Mail → Settings → Mail Accounts → "Send mail as". Add them there first; then they appear in the From list when you write a message. Sent mail goes through this account's server and lands in its Sent folder.</p></div>
     </div>
     <p id="aResult" class="muted"></p>

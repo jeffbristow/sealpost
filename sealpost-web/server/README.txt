@@ -86,7 +86,7 @@ New in 1.4.0
 New in 1.5.0 — Sealpost on your iPhone
   Install:
     1. On the iPhone, open Safari (it must be Safari) and go to
-       https://jeffbristow.com/mysite/SealPost/
+       your Sealpost address, e.g. https://example.com/sealpost/
     2. Tap the Share button (square with an arrow) -> Add to Home Screen
        -> Add. A Sealpost icon appears on the home screen.
     3. Open Sealpost FROM THAT ICON and sign in with your vault username
@@ -136,7 +136,7 @@ New in 1.6.0 — Face ID
 
 New in 1.7.0 — "Send as" addresses
   - Settings -> Mail accounts -> Edit -> "Send as" addresses: one per
-    line, e.g.   Jeff Bristow <jeff@jeffbristow.com>
+    line, e.g.   Your Name <you@example.com>
     (Set the address up in your mail provider first — Zoho Mail ->
     Settings -> Mail Accounts -> "Send mail as".)
   - The From list in the composer then offers each address. Replies use

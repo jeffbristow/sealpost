@@ -9,6 +9,9 @@ same PGP features, installable on an iPhone home screen). See
 
 ## Install (ready-made installer)
 
+Download the installer for your system from the
+[GitHub releases page](https://github.com/jeffbristow/sealpost/releases).
+
 **Windows**
 1. Run `Sealpost Setup <version>.exe`.
 2. Windows SmartScreen will say "Windows protected your PC" because the
@@ -42,8 +45,13 @@ macOS 13. Both builds take the same `.sealpost` update files.
 
 ## Updating (no reinstall)
 
-- **Settings → About & updates → Install update file…** and pick the
-  `.sealpost` file. Sealpost restarts into the new version.
+- **Settings → About & updates → Check for updates** asks GitHub
+  ([github.com/jeffbristow/sealpost/releases](https://github.com/jeffbristow/sealpost/releases))
+  for a newer version and offers to download and install it. Sealpost
+  restarts into the new version.
+- Or download the `.sealpost` file from the
+  [releases page](https://github.com/jeffbristow/sealpost/releases) yourself:
+  **Settings → About & updates → Install update file…** and pick it.
 - **Still on 1.0.0?** Unzip `Sealpost-Update-x.y.z.zip` into a folder and
   double-click `Install-Update.bat`. It finds your install, closes Sealpost,
   backs up the old code (`resources\app.asar.backup`), applies the update,
@@ -154,6 +162,7 @@ src/main/cache.js      Offline mail (encrypted local copy + outbox)
 src/main/backup.js     .sealbackup create / restore
 src/main/applock.js    PIN + Windows Hello
 src/main/asarinfo.js   Reads update files without locking them
+src/main/updatecheck.js  Check for updates on GitHub releases (1.12.0)
 src/main/presets.js    Provider server settings
 src/renderer/          UI: index.html, styles.css, app.js
 build/                 Icons, afterPack hook (stamps icon into the .exe), update builder
@@ -162,6 +171,7 @@ test/                  Self-tests (pgp-test.js + one per feature release)
 
 ## Version history
 
+- **1.12.0** — New: **Check for updates** (Settings → About & updates) looks for a newer release on GitHub and downloads and installs its update file; **Releases on GitHub** opens the releases page. Example addresses in Settings now use example.com.
 - **1.11.0** — **Mac**: Sealpost for macOS 13+ and, as a separate build, macOS 12 (Apple Silicon and Intel). The standard Mac menu bar (⌘C / ⌘V / ⌘Z / ⌘Q, ⌘, for Settings); ⌘ works in place of Ctrl in Sealpost's shortcuts, and ⌘-click selects messages. Passwords are kept with the Mac Keychain. Windows and Linux: no changes besides the version number.
 - **1.10.0** — New: **folder management** (new folder / subfolder, rename, move, delete; Inbox, Sent, Drafts, Trash etc. are protected), **pinned folders** under Favorites, drag messages onto a folder to move them. **All Inboxes** (2+ accounts): every Inbox in one list; replies go out from the right account. **Conversation view**, per account and off unless turned on: replies are grouped under one line. Pins and the conversation switch sync with Sealpost Web (server 1.8.0+).
 - **1.9.2** — Folders and the first page of messages saved for Offline mail show instantly; the server's up-to-date list replaces them a moment later.
@@ -188,7 +198,7 @@ test/                  Self-tests (pgp-test.js + one per feature release)
 - OAuth2 sign-in (Microsoft/Google "Sign in with…") is not implemented; use app passwords. Some Microsoft 365 tenants disable password IMAP entirely.
 - No S/MIME.
 - Installer is unsigned (SmartScreen prompt). A code-signing certificate can be added via electron-builder's `win.certificateFile` setting.
-- Updates are installed by hand from a `.sealpost` file; there is no automatic update check.
+- Sealpost only checks for updates when you click **Check for updates**; it never checks on its own. Update files are not signed (they come over HTTPS from GitHub).
 
 ## License
 

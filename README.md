@@ -11,6 +11,13 @@ a zero-knowledge, end-to-end encrypted vault on your own website.
 | [`sealpost-web/server/`](sealpost-web/server/) | Sync server + Sealpost Web (PHP 8 + SQLite, no database server needed). See [README.txt](sealpost-web/server/README.txt). |
 | [`sealpost-web/sealpost-check.php`](sealpost-web/sealpost-check.php) | Upload alone to check whether a host can run the server. |
 
+## Downloads and updates
+
+Installers, `.sealpost` update files and the server zip are published on the
+[GitHub releases page](https://github.com/jeffbristow/sealpost/releases).
+The desktop app checks there (Settings → About & updates → Check for
+updates), and installed servers update themselves from there (1.10.0+).
+
 ## Quick start (development)
 
 ```bash

@@ -2562,6 +2562,32 @@ $('#btnInstallUpdate').addEventListener('click', async () => {
   } catch (e) { toast(e.message, 'err'); }
 });
 
+/* ---------- Check for updates on GitHub (added 1.12.0) ---------- */
+$('#btnCheckUpdate').addEventListener('click', async () => {
+  const btn = $('#btnCheckUpdate'), status = $('#updateStatus');
+  btn.disabled = true; status.textContent = 'Checking GitHub for updates…';
+  try {
+    const u = await call('appCheckUpdate');
+    if (!u.latest) { status.textContent = 'No Sealpost releases were found on GitHub.'; return; }
+    if (!u.newer) { status.textContent = `You have the newest version (${u.current}).`; return; }
+    status.textContent = `Version ${u.latest} is available (you have ${u.current}).`;
+    if (!u.file) {
+      if (await confirmBox('Update available', `Sealpost ${u.latest} is available, but it has no update file. Open the release page to download the installer?`, 'Open release page')) call('shellOpenExternal', u.page);
+      return;
+    }
+    const sizeMB = u.file.size ? ` (${(u.file.size / 1048576).toFixed(1)} MB)` : '';
+    if (!(await confirmBox('Update available', `Sealpost ${u.latest} is available (you have ${u.current}). Download and install it from GitHub now${sizeMB}?`, 'Download and install'))) return;
+    status.textContent = `Downloading Sealpost ${u.latest}…`;
+    const r = await call('appDownloadUpdate');
+    status.textContent = `Version ${r.version} is installed.`;
+    const ok = await confirmBox('Update ready', `Version ${r.version} is installed (you had ${r.from}). Restart Sealpost now to use it?`, 'Restart now');
+    if (ok) await call('appRestart');
+    else toast(`Update to ${r.version} will apply next time Sealpost starts.`);
+  } catch (e) { status.textContent = ''; toast(e.message, 'err'); }
+  finally { btn.disabled = false; }
+});
+$('#btnReleasesPage').addEventListener('click', () => call('appReleasesPage').catch(e => toast(e.message, 'err')));
+
 $('#btnSaveSettings').addEventListener('click', async () => {
   state.settings = await call('settingsSet', {
     loadRemoteImages: $('#setRemote').checked,
@@ -2845,7 +2871,7 @@ async function cloudSyncNow() {
 async function cloudWizard() {
   const probe = await dialog({
     title: 'Set up sync — your server',
-    html: `<p>Enter the address of the folder where you uploaded the Sealpost Sync files. It's shown on that folder's start page, e.g. <span class="cloud-code">https://jeffbristow.com/mysite/SealPost/</span></p>
+    html: `<p>Enter the address of the folder where you uploaded the Sealpost Sync files. It's shown on that folder's start page, e.g. <span class="cloud-code">https://example.com/sealpost/</span></p>
       <label>Server address</label><input type="text" id="cwServer" placeholder="https://your-site/…/" spellcheck="false">
       <p id="cwErr" class="error"></p>`,
     okText: 'Next',
