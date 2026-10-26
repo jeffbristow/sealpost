@@ -12,8 +12,8 @@
  *   4. Decrypt / verify / import (detected automatically)
  * ===================================================================== */
 
-import { $, esc, toast, copyText, withPassphrase } from './ui.js?v=1.10.1';
-import { emailsOf } from './pgp.js?v=1.10.1';
+import { $, esc, toast, copyText, withPassphrase } from './ui.js?v=1.11.0';
+import { emailsOf } from './pgp.js?v=1.11.0';
 
 export function initTools(ctx) {
   const { keyring } = ctx;

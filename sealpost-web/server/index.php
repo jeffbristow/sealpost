@@ -278,6 +278,11 @@ $v = SEALPOST_SERVER_VERSION;
         <input type="text" id="stCache" inputmode="numeric">
         <label for="stPage">Messages per page</label>
         <input type="text" id="stPage" inputmode="numeric">
+        <h3>addy.io aliases</h3>
+        <label class="check"><input type="checkbox" id="stAddy"> I use addy.io — use the real recipient's key for addy.io addresses</label>
+        <p class="muted small">Writing through an addy.io alias puts the real address inside the To address: <code>shop+sam=example.org@example.com</code> goes to <b>sam@example.org</b>. With this on, Sealpost encrypts to, searches for and assigns the key of that real address. The To address stays as it is, so the mail still goes through addy.io. addy.io's own domains and the domains of your "Send as" addresses are recognised by themselves.</p>
+        <label for="stAddyDomains">My other addy.io domains (custom domains)</label>
+        <input type="text" id="stAddyDomains" placeholder="example.com, mail.example.org">
         <div class="row-btns"><button id="stSave" class="btn primary" type="button">Save settings</button></div>
         <p class="muted small">Settings that belong to one PC (app lock PIN, offline mail, notifications) are changed in Sealpost on that PC.</p>
       </div>

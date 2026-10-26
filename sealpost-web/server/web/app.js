@@ -24,16 +24,17 @@
  * settings.js, small shared helpers in ui.js.
  * ===================================================================== */
 
-import * as vault from './vault.js?v=1.10.1';
-import { Keyring } from './pgp.js?v=1.10.1';
-import { readMessage } from './reader.js?v=1.10.1';
-import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.10.1';
-import { initComposer } from './composer.js?v=1.10.1';
-import { initPeople } from './people.js?v=1.10.1';
-import { initTools } from './tools.js?v=1.10.1';
-import { initSettings } from './settings.js?v=1.10.1';
-import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.10.1';   // 1.6.0
-import { initUpdates } from './update.js?v=1.10.1';   // 1.10.0
+import * as vault from './vault.js?v=1.11.0';
+import { Keyring } from './pgp.js?v=1.11.0';
+import { readMessage } from './reader.js?v=1.11.0';
+import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.11.0';
+import { initComposer } from './composer.js?v=1.11.0';
+import { initPeople } from './people.js?v=1.11.0';
+import { initTools } from './tools.js?v=1.11.0';
+import { initSettings } from './settings.js?v=1.11.0';
+import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.11.0';   // 1.6.0
+import { initUpdates } from './update.js?v=1.11.0';   // 1.10.0
+import { keyAddressFn } from './addy.js?v=1.11.0';   // 1.11.0
 
 /* =================================================================
  * 1. STATE + CONTEXT
@@ -122,6 +123,8 @@ async function reloadKeyring() {
     const c = state.vault.contacts.find(x => (x.emails || []).includes(email));
     return c && c.keyFp ? c.keyFp : null;
   });
+  // 1.11.0: "I use addy.io" — keys for an addy.io address belong to the real recipient inside it
+  keyring.setAddressMap(keyAddressFn(state.vault.settings, state.vault.accounts));
 }
 
 async function saveToVault(changes) {
@@ -1008,8 +1011,9 @@ function renderMessage(v) {
 
 /* ---------- 7a. Is the signer the key assigned to this contact? ---------- */
 function senderCheck(v) {
-  const from = (v.from[0] && v.from[0].address) || '';
-  const contact = state.vault.contacts.find(c => (c.emails || []).includes(from));
+  const from = ((v.from[0] && v.from[0].address) || '').toLowerCase();
+  const kf = keyring.keyAddress(from);   // 1.11.0: mail forwarded by addy.io comes "from" an addy.io address
+  const contact = state.vault.contacts.find(c => (c.emails || []).includes(from)) || state.vault.contacts.find(c => (c.emails || []).includes(kf));
   if (!contact || !contact.keyFp) return contact ? { contact, status: 'contact' } : null;
   const pinned = keyring.publicKeys.get(contact.keyFp);
   const ids = pinned ? pinned.getKeys().map(k => k.getKeyID().toHex().toUpperCase()) : [];

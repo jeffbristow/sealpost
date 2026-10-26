@@ -1800,15 +1800,17 @@ async function updateKeyStatus(initial = false) {
   let st = {};
   try { st = await call('pgpRecipientStatus', emails); } catch { return; }
 
-  let allOk = true, wantEncrypt = false, signRule = null;
+  let allOk = true, wantEncrypt = false, signRule = null, viaAddy = false;
   for (const e of emails) {
     const s = st[e] || {};
-    const who = s.contact && s.contact.name ? `${s.contact.name}` : e;
+    // 1.13.0: an addy.io address is shown as the real recipient its key belongs to
+    if (s.keyAddress) viaAddy = true;
+    const who = (s.contact && s.contact.name ? `${s.contact.name}` : s.keyAddress || e) + (s.keyAddress ? ' (via addy.io)' : '');
     const c = document.createElement('span');
     if (s.ok) {
       c.className = 'key-chip ok';
       c.innerHTML = `🔑 ${esc(who)}${s.verified ? ' <span class="ver" title="Fingerprint verified">✔</span>' : ''}`;
-      c.title = `${e}\nKey ${s.fingerprint}${s.pinned ? '\n(assigned in Contacts)' : ''}`;
+      c.title = `${e}${s.keyAddress ? `\nThrough addy.io to ${s.keyAddress} — encrypted to their key` : ''}\nKey ${s.fingerprint}${s.pinned ? '\n(assigned in Contacts)' : ''}`;
     } else {
       allOk = false;
       c.className = 'key-chip missing';
@@ -1839,12 +1841,17 @@ async function updateKeyStatus(initial = false) {
     else if (initial && state.settings.defaultEncrypt) $('#cEncrypt').checked = allOk;
   }
   if (!compose.touched.sign && signRule) $('#cSign').checked = signRule === 'always';
-  $('#cHint').textContent = $('#cEncrypt').checked && !allOk ? 'Some recipients have no usable key — encryption will fail.' : '';
+  $('#cHint').textContent = [
+    $('#cEncrypt').checked && !allOk ? 'Some recipients have no usable key — encryption will fail.' : '',
+    // 1.13.0: addy.io hides your address, but the message itself can still name your key
+    viaAddy && ($('#cSign').checked || $('#cAttachKey').checked) ? 'Through addy.io they see your alias, but a signature or attached key shows the addresses on your key.' : ''
+  ].filter(Boolean).join(' ');
 }
 $('#cFrom').addEventListener('change', () => { updateKeyStatus(); markDirty(); });
 $('#cEncrypt').addEventListener('change', () => { compose.touched.encrypt = true; updateKeyStatus(); markDirty(); });
-$('#cSign').addEventListener('change', () => { compose.touched.sign = true; markDirty(); });
+$('#cSign').addEventListener('change', () => { compose.touched.sign = true; markDirty(); updateKeyStatus(); });
 ['#cHideSubject', '#cAttachKey'].forEach(id => $(id).addEventListener('change', markDirty));
+$('#cAttachKey').addEventListener('change', () => updateKeyStatus());   // 1.13.0: addy.io hint
 
 /* ---------- 8e. Attachments ---------- */
 function renderComposeAttachments() {
@@ -2304,9 +2311,12 @@ function lookupDialog(email, after) {
     const res = $('#luRes');
     res.innerHTML = '<p class="muted">Searching…</p>';
     try {
-      const r = await call('pgpLookup', $('#luEmail').value);
+      const asked = $('#luEmail').value;
+      const r = await call('pgpLookup', asked);
       res.innerHTML = '';
-      if (!r.found.length) res.innerHTML = `<p>No key found.${r.errors.length ? '<br><span class="muted small">' + esc(r.errors.join(' · ')) + '</span>' : ''}</p><p class="muted small">Ask the person to send you their public key, or to publish it on keys.openpgp.org.</p>`;
+      // 1.13.0: an addy.io address is searched as the real recipient inside it
+      if (r.via) res.innerHTML = `<p class="muted small">addy.io address — searching for the real recipient, <b>${esc(r.searched)}</b>.</p>`;
+      if (!r.found.length) res.innerHTML += `<p>No key found.${r.errors.length ? '<br><span class="muted small">' + esc(r.errors.join(' · ')) + '</span>' : ''}</p><p class="muted small">Ask the person to send you their public key, or to publish it on keys.openpgp.org.</p>`;
       for (const f of r.found) {
         const el = document.createElement('div');
         el.className = 'lookup-result';
@@ -2314,7 +2324,16 @@ function lookupDialog(email, after) {
           <div class="muted small">${esc(f.info.algorithm)} · created ${esc(new Date(f.info.created).toLocaleDateString())} · source: ${esc(f.source)}${f.info.revoked ? ' · REVOKED' : ''}${f.info.expired ? ' · EXPIRED' : ''}</div>`;
         const b = document.createElement('button');
         b.className = 'btn small primary'; b.textContent = 'Import'; b.style.marginTop = '6px';
-        b.onclick = async () => { try { toast(importSummary(await call('pgpImportText', f.armored))); b.disabled = true; b.textContent = 'Imported'; if ($('#view-keys').classList.contains('active')) loadKeys(); } catch (e) { toast(e.message, 'err'); } };
+        b.onclick = async () => {
+          try {
+            toast(importSummary(await call('pgpImportText', f.armored)));
+            // 1.13.0: and to the contact for this address, if it has no key yet (as Sealpost Web does)
+            const who = await call('contactsAssignFound', asked, f.info.fingerprint).catch(() => null);
+            if (who) toast(`Key assigned to ${who}`);
+            b.disabled = true; b.textContent = 'Imported';
+            if ($('#view-keys').classList.contains('active')) loadKeys();
+          } catch (e) { toast(e.message, 'err'); }
+        };
         el.appendChild(b);
         res.appendChild(el);
       }
@@ -2543,6 +2562,8 @@ async function loadSettingsView() {
   $('#setAutoContacts').checked = s.autoAddContacts !== false;               // 1.1.0
   $('#setPush').checked = s.pushMail !== false;                              // 1.2.0
   $('#setNotify').checked = s.notifyNewMail !== false;                       // 1.2.0
+  $('#setAddy').checked = !!s.addyRecipients;                                // 1.13.0
+  $('#setAddyDomains').value = (s.addyDomains || []).join(', ');             // 1.13.0
   renderLastBackup();                                                        // 1.2.0
   renderOfflinePanel();                                                      // 1.3.0
   renderCloudPanel();                                                        // 1.4.0
@@ -2599,7 +2620,9 @@ $('#btnSaveSettings').addEventListener('click', async () => {
     composeFormat: $('#setFormat').value,
     autoAddContacts: $('#setAutoContacts').checked,
     pushMail: $('#setPush').checked,
-    notifyNewMail: $('#setNotify').checked
+    notifyNewMail: $('#setNotify').checked,
+    addyRecipients: $('#setAddy').checked,       // 1.13.0
+    addyDomains: $('#setAddyDomains').value
   });
   renderPushStatus();
   toast('Settings saved');

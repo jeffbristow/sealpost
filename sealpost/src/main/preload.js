@@ -42,7 +42,9 @@ const channels = [
   // 1.10.0
   'mail:renameFolder', 'mail:deleteFolder', 'accounts:setPrefs', 'mail:listUnified', 'mail:listUnifiedCached',
   // 1.12.0 updates from GitHub
-  'app:checkUpdate', 'app:downloadUpdate', 'app:releasesPage'
+  'app:checkUpdate', 'app:downloadUpdate', 'app:releasesPage',
+  // 1.13.0 addy.io
+  'contacts:assignFound'
 ];
 
 const api = {};

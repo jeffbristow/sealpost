@@ -16,9 +16,9 @@
  *   7. Send
  * ===================================================================== */
 
-import { $, $$, esc, escHtml, show, addr, fmtDate, fmtSize, toast, dialog, confirmBox, withPassphrase, pickFiles } from './ui.js?v=1.10.1';
-import { composeMessage, buildDraft, parseAddressList, detectType, htmlToPlain } from './compose.js?v=1.10.1';
-import { readDraft } from './reader.js?v=1.10.1';
+import { $, $$, esc, escHtml, show, addr, fmtDate, fmtSize, toast, dialog, confirmBox, withPassphrase, pickFiles } from './ui.js?v=1.11.0';
+import { composeMessage, buildDraft, parseAddressList, detectType, htmlToPlain } from './compose.js?v=1.11.0';
+import { readDraft } from './reader.js?v=1.11.0';
 
 const MAX_ATTACH = 25 * 1048576;
 
@@ -377,16 +377,18 @@ export function initComposer(ctx) {
     }
     if (!emails.length) { $('#cHint').textContent = ''; return; }
     const st = await keyring.recipientStatus(emails);
-    let allOk = true, wantEncrypt = false, signRule = null;
+    let allOk = true, wantEncrypt = false, signRule = null, viaAddy = false;
     for (const e of emails) {
       const s = st[e] || {};
-      const ct = state.vault.contacts.find(x => (x.emails || []).includes(e));
-      const who = ct && ct.name ? ct.name : e;
+      // 1.11.0: an addy.io address is shown as the real recipient its key belongs to
+      if (s.keyAddress) viaAddy = true;
+      const ct = state.vault.contacts.find(x => (x.emails || []).includes(e)) || (s.keyAddress ? state.vault.contacts.find(x => (x.emails || []).includes(s.keyAddress)) : null);
+      const who = (ct && ct.name ? ct.name : s.keyAddress || e) + (s.keyAddress ? ' (via addy.io)' : '');
       const chip = document.createElement('span');
       if (s.ok) {
         chip.className = 'key-chip ok';
         chip.innerHTML = `🔑 ${esc(who)}${s.verified ? ' <span title="Fingerprint verified">✔</span>' : ''}`;
-        chip.title = `${e}\nKey ${s.fingerprint}${s.pinned ? '\n(assigned in Contacts)' : ''}`;
+        chip.title = `${e}${s.keyAddress ? `\nThrough addy.io to ${s.keyAddress} — encrypted to their key` : ''}\nKey ${s.fingerprint}${s.pinned ? '\n(assigned in Contacts)' : ''}`;
       } else {
         allOk = false;
         chip.className = 'key-chip missing';
@@ -414,12 +416,17 @@ export function initComposer(ctx) {
       else if (initial && state.vault.settings.defaultEncrypt) $('#cEncrypt').checked = allOk;
     }
     if (!c.touched.sign && signRule) $('#cSign').checked = signRule === 'always';
-    $('#cHint').textContent = $('#cEncrypt').checked && !allOk ? 'Some recipients have no usable key — encryption will fail.' : '';
+    $('#cHint').textContent = [
+      $('#cEncrypt').checked && !allOk ? 'Some recipients have no usable key — encryption will fail.' : '',
+      // 1.11.0: addy.io hides your address, but the message itself can still name your key
+      viaAddy && ($('#cSign').checked || $('#cAttachKey').checked) ? 'Through addy.io they see your alias, but a signature or attached key shows the addresses on your key.' : ''
+    ].filter(Boolean).join(' ');
   }
   $('#cFrom').addEventListener('change', () => { updateKeyStatus(); markDirty(); });
   $('#cEncrypt').addEventListener('change', () => { c.touched.encrypt = true; updateKeyStatus(); markDirty(); });
-  $('#cSign').addEventListener('change', () => { c.touched.sign = true; markDirty(); });
+  $('#cSign').addEventListener('change', () => { c.touched.sign = true; markDirty(); updateKeyStatus(); });
   ['#cHideSubject', '#cAttachKey'].forEach(id => $(id).addEventListener('change', markDirty));
+  $('#cAttachKey').addEventListener('change', () => updateKeyStatus());   // 1.11.0: addy.io hint
 
   /* =================================================================
    * 5. ATTACHMENTS — read in the browser; encrypted with the message

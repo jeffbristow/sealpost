@@ -215,6 +215,12 @@
         <label class="check"><input type="checkbox" id="setAutoContacts"> Add people I write to as contacts automatically</label>
         <label>Messages per page</label>
         <input type="number" id="setPage" min="10" max="500">
+        <!-- 1.13.0 -->
+        <h3>addy.io aliases</h3>
+        <label class="check"><input type="checkbox" id="setAddy"> I use addy.io — use the real recipient's key for addy.io addresses</label>
+        <p class="muted small">Writing through an addy.io alias puts the real address inside the To address: <code>shop+sam=example.org@example.com</code> goes to <b>sam@example.org</b>. With this on, Sealpost encrypts to, searches for and assigns the key of that real address. The To address stays as it is, so the mail still goes through addy.io. addy.io's own domains and the domains of your "Send as" addresses are recognised by themselves.</p>
+        <label>My other addy.io domains (custom domains)</label>
+        <input type="text" id="setAddyDomains" placeholder="example.com, mail.example.org">
         <button id="btnSaveSettings" class="btn primary">Save settings</button>
         <p class="muted small">Data folder: %APPDATA%\Sealpost — back up the <b>keyring</b> folder there (or export your secret key) so you never lose access to encrypted mail.</p>
       </div>

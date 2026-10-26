@@ -476,6 +476,21 @@ class PgpEngine {
     try { return this.pinnedLookup ? this.pinnedLookup(email) : null; } catch { return null; }
   }
 
+  /* 1.13.0: addy.io — main.js hands us email -> the address to use for keys
+   * (the real recipient inside an addy.io address when "I use addy.io" is on;
+   * see addy.js). Pinned keys are looked up for the address as typed first,
+   * then for the real one; keyring keys by the real address. */
+  setAddressMap(fn) { this.addressMap = fn; }
+
+  keyAddress(email) {
+    const e = (email || '').trim().toLowerCase();
+    try { return (this.addressMap && this.addressMap(e)) || e; } catch { return e; }
+  }
+
+  _pinnedFor(e, k) { return this._pinnedFp(e) || (k !== e ? this._pinnedFp(k) : null); }
+
+  async _bestKeyFor(e, k) { return (await this._bestKeyByEmail(k)) || (k !== e ? this._bestKeyByEmail(e) : null); }
+
   /** Can this public key be used to encrypt right now? */
   async _encUsable(key) {
     try { if (await key.isRevoked()) return { ok: false, reason: 'revoked' }; } catch { /* ignore */ }
@@ -502,12 +517,13 @@ class PgpEngine {
   /** Key used to encrypt to an address: the pinned key, else the newest usable key. */
   async findPublicFor(email) {
     email = (email || '').toLowerCase();
-    const pinned = this._pinnedFp(email);
+    const k = this.keyAddress(email);                  // 1.13.0: addy.io -> real address
+    const pinned = this._pinnedFor(email, k);
     if (pinned) {
       const key = this.publicKeys.get(pinned);
       return key && (await this._encUsable(key)).ok ? key : null;
     }
-    return this._bestKeyByEmail(email);
+    return this._bestKeyFor(email, k);
   }
 
   /** Per-recipient key status for the composer chips. */
@@ -515,8 +531,9 @@ class PgpEngine {
     const out = {};
     for (const raw of emails) {
       const e = (raw || '').toLowerCase();
-      const pinned = this._pinnedFp(e);
-      const info = { ok: false, pinned: !!pinned, fingerprint: null, problem: null, otherKey: null, verified: false };
+      const ka = this.keyAddress(e);                   // 1.13.0: addy.io -> real address
+      const pinned = this._pinnedFor(e, ka);
+      const info = { ok: false, pinned: !!pinned, fingerprint: null, problem: null, otherKey: null, verified: false, keyAddress: ka !== e ? ka : null };
       if (pinned) {
         const key = this.publicKeys.get(pinned);
         if (!key) info.problem = 'missing';
@@ -525,10 +542,10 @@ class PgpEngine {
           if (u.ok) { info.ok = true; info.fingerprint = pinned; } else info.problem = u.reason;
         }
         // a different key for this address exists (possible key change)
-        const best = await this._bestKeyByEmail(e);
+        const best = await this._bestKeyFor(e, ka);
         if (best && best.getFingerprint().toUpperCase() !== pinned) info.otherKey = best.getFingerprint().toUpperCase();
       } else {
-        const k = await this._bestKeyByEmail(e);
+        const k = await this._bestKeyFor(e, ka);
         if (k) { info.ok = true; info.fingerprint = k.getFingerprint().toUpperCase(); }
       }
       if (info.fingerprint) {
@@ -739,7 +756,8 @@ class PgpEngine {
    * 6. ONLINE KEY LOOKUP (WKD first, then keys.openpgp.org)
    * ================================================================= */
   async lookupOnline(email) {
-    email = email.trim().toLowerCase();
+    const asked = String(email || '').trim().toLowerCase();
+    email = this.keyAddress(asked);                    // 1.13.0: an addy.io address is searched as the real one
     const found = [];
     const errors = [];
 
@@ -776,7 +794,7 @@ class PgpEngine {
       } else if (r.status !== 404) errors.push('keys.openpgp.org: HTTP ' + r.status);
     } catch (e) { errors.push('keys.openpgp.org: ' + e.message); }
 
-    return { found, errors };
+    return { found, errors, searched: email, via: email !== asked ? asked : null };
   }
 
   /** Upload your public key to keys.openpgp.org and request email verification. */

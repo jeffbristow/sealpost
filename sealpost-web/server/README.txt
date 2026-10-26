@@ -200,13 +200,27 @@ New in 1.10.0 — one-click updates
     are one click.
   - Also: status.php has a "One-click updates" line.
 
+New in 1.11.0
+  - addy.io aliases: Settings -> "I use addy.io". Writing through an
+    addy.io alias puts the real recipient inside the To address
+    (shop+sam=example.org@example.com goes to sam@example.org). With the
+    setting on, Sealpost Web encrypts to, finds online and assigns the
+    key of that real address; the To address stays as it is, so the mail
+    still goes through addy.io. addy.io's own domains and your "Send as"
+    domains are recognised by themselves; add other custom domains under
+    "My other addy.io domains". The composer's key chips show the real
+    recipient ("via addy.io"). Same setting as Sealpost 1.13.0 on your
+    PCs (it syncs).
+  - Updating: upload everything except config.php (the whole web/
+    folder), or use the one-click update.
+
 New in 1.10.1
   - Example addresses in this README and in Settings -> Mail accounts
     -> "Send as" now use example.com.
   - Downloads and updates: https://github.com/jeffbristow/sealpost/releases
 
 Quick test after updating (5 minutes)
-  [ ] status.php shows all green and "Server version 1.10.1"
+  [ ] status.php shows all green and "Server version 1.11.0"
   [ ] Sign in; Settings -> Mail accounts -> Edit -> Test connection
       says "Receiving and sending both work"
   [ ] Keys -> Find online… -> your own address finds your key (if you

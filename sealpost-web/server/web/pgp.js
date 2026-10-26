@@ -62,6 +62,21 @@ export class Keyring {
 
   setPinnedLookup(fn) { this.pinned = fn; }
 
+  /* 1.11.0: addy.io — app.js hands us email -> the address to use for keys
+   * (the real recipient inside an addy.io address when "I use addy.io" is on;
+   * see addy.js). Contact-assigned keys are looked up for the address as typed
+   * first, then for the real one; keyring keys by the real address. */
+  setAddressMap(fn) { this.addressMap = fn; }
+
+  keyAddress(email) {
+    const e = (email || '').trim().toLowerCase();
+    try { return (this.addressMap && this.addressMap(e)) || e; } catch { return e; }
+  }
+
+  pinnedFor(e, k) { return this.pinned(e) || (k !== e ? this.pinned(k) : null); }
+
+  async bestKeyFor(e, k) { return (await this.bestKeyByEmail(k)) || (k !== e ? this.bestKeyByEmail(e) : null); }
+
   userIdOf(fp) {
     const k = this.publicKeys.get(fp) || this.privateKeys.get(fp);
     return k ? k.getUserIDs()[0] || fp : fp;
@@ -218,12 +233,13 @@ export class Keyring {
 
   async findPublicFor(email) {
     email = (email || '').toLowerCase();
-    const pinned = this.pinned(email);
+    const k = this.keyAddress(email);                  // 1.11.0: addy.io -> real address
+    const pinned = this.pinnedFor(email, k);
     if (pinned) {
       const key = this.publicKeys.get(pinned);
       return key && (await this.encUsable(key)).ok ? key : null;
     }
-    return this.bestKeyByEmail(email);
+    return this.bestKeyFor(email, k);
   }
 
   /** Per-recipient status for the composer chips. */
@@ -231,16 +247,17 @@ export class Keyring {
     const out = {};
     for (const raw of emails) {
       const e = (raw || '').toLowerCase();
-      const pinned = this.pinned(e);
-      const info = { ok: false, pinned: !!pinned, fingerprint: null, problem: null, otherKey: null, verified: false };
+      const ka = this.keyAddress(e);                   // 1.11.0: addy.io -> real address
+      const pinned = this.pinnedFor(e, ka);
+      const info = { ok: false, pinned: !!pinned, fingerprint: null, problem: null, otherKey: null, verified: false, keyAddress: ka !== e ? ka : null };
       if (pinned) {
         const key = this.publicKeys.get(pinned);
         if (!key) info.problem = 'missing';
         else { const u = await this.encUsable(key); if (u.ok) { info.ok = true; info.fingerprint = pinned; } else info.problem = u.reason; }
-        const best = await this.bestKeyByEmail(e);
+        const best = await this.bestKeyFor(e, ka);
         if (best && best.getFingerprint().toUpperCase() !== pinned) info.otherKey = best.getFingerprint().toUpperCase();
       } else {
-        const k = await this.bestKeyByEmail(e);
+        const k = await this.bestKeyFor(e, ka);
         if (k) { info.ok = true; info.fingerprint = k.getFingerprint().toUpperCase(); }
       }
       if (info.fingerprint) { const t = this.trust[info.fingerprint]; info.verified = t === 'verified' || t === 'ultimate'; }

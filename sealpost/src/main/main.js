@@ -32,6 +32,7 @@ const { CacheStore } = require('./cache');          // 1.3.0
 const { SyncService } = require('./sync');          // 1.4.0
 const presets = require('./presets');
 const updateCheck = require('./updatecheck');      // 1.12.0
+const addy = require('./addy');                     // 1.13.0 addy.io reply addresses
 const { readPackageJson, fs: ofs } = require('./asarinfo'); // lock-free update reading (1.0.3)
 
 let win, store, pgp, mail, contacts, cache, cloud;
@@ -73,6 +74,8 @@ async function init() {
   // 1.1.0: contacts — a contact's assigned key is always used for that address
   contacts = new ContactStore(dataDir);
   pgp.setPinnedLookup(email => contacts.pinnedFor(email));
+  // 1.13.0: "I use addy.io" — keys for an addy.io address belong to the real recipient inside it
+  pgp.setAddressMap(email => addy.keyAddressFn(store.getSettings(), store.listAccounts())(email));
   cache = new CacheStore(dataDir); // 1.3.0: opens only when you unlock with your PIN
   // 1.4.0: sync with your own web server (accounts, contacts, keys, settings — end-to-end encrypted)
   cloud = new SyncService({
@@ -171,7 +174,7 @@ function cloudSyncSoon(ms = 4000) {
 }
 
 /** Requests that change accounts, contacts, keys or settings -> upload soon. */
-const CLOUD_MUTATING = /^(accounts:(save|delete|setPrefs)|mail:(renameFolder|deleteFolder)|contacts:(save|delete|pinKey|importKeyFor|fromMessage)|pgp:(generate|importText|importFile|delete|setTrust|revoke|changePassphrase|extendExpiry|syncPassphrase|unsyncPassphrase)|att:importKey|mail:importAutocrypt|settings:set|backup:restore)$/;
+const CLOUD_MUTATING = /^(accounts:(save|delete|setPrefs)|mail:(renameFolder|deleteFolder)|contacts:(save|delete|pinKey|importKeyFor|fromMessage|assignFound)|pgp:(generate|importText|importFile|delete|setTrust|revoke|changePassphrase|extendExpiry|syncPassphrase|unsyncPassphrase)|att:importKey|mail:importAutocrypt|settings:set|backup:restore)$/;
 
 /** Things arrived from another device: reconnect changed accounts, refresh key slots. */
 async function afterCloudApplied(changes) {
@@ -510,7 +513,8 @@ async function importKeys(data) {
 async function senderKeyInfo(view) {
   const from = view.from && view.from[0] && (view.from[0].address || '').toLowerCase();
   if (!from) return null;
-  const contact = contacts.byEmail(from);
+  const keyFrom = pgp.keyAddress(from);               // 1.13.0: mail forwarded by addy.io comes "from" an addy.io address
+  const contact = contacts.byEmail(from) || contacts.byEmail(keyFrom);
 
   // a key the sender sent along (Autocrypt header or attached .asc)
   let offered = null;
@@ -521,7 +525,7 @@ async function senderKeyInfo(view) {
       if (a) offered = await pgp.peekKey(a.content);
     }
   } catch { offered = null; }
-  if (offered && !offered.emails.includes(from)) offered = null; // not the sender's own key
+  if (offered && !offered.emails.includes(from) && !offered.emails.includes(keyFrom)) offered = null; // not the sender's own key
 
   const sig = view.pgp.signatures[0] || null;
   const signerFp = sig && sig.valid && sig.fingerprint ? sig.fingerprint : null;
@@ -560,6 +564,7 @@ function registerIpc() {
   handle('settings:get', () => publicSettings());
   handle('settings:set', patch => {
     const { appLock, ...rest } = patch || {};
+    if ('addyDomains' in rest) rest.addyDomains = addy.cleanDomains(rest.addyDomains);   // 1.13.0
     const pushBefore = store.getSettings().pushMail !== false;
     store.setSettings(rest);
     if ((store.getSettings().pushMail !== false) !== pushBefore) applyPushSetting(); // 1.2.0
@@ -973,7 +978,7 @@ function registerIpc() {
   handle('pgp:recipientStatus', async emails => {
     const st = await pgp.recipientStatus(emails);
     for (const e of Object.keys(st)) {                 // 1.1.0: add contact + policy
-      const c = contacts.byEmail(e);
+      const c = contacts.byEmail(e) || contacts.byEmail(pgp.keyAddress(e));   // 1.13.0: or the addy.io recipient's
       st[e].contact = c ? { id: c.id, name: c.name, encrypt: c.encrypt, sign: c.sign } : null;
     }
     return st;
@@ -1013,11 +1018,24 @@ function registerIpc() {
   handle('contacts:candidateKeys', async id => {
     const c = contacts.get(id);
     if (!c) return [];
+    const want = new Set(c.emails.flatMap(e => [e, pgp.keyAddress(e)]));   // 1.13.0: + real addresses inside addy.io ones
     const out = [];
     for (const key of pgp.publicKeys.values()) {
-      if (pgp._emailsOf(key).some(e => c.emails.includes(e))) out.push(await pgp.describe(key));
+      if (pgp._emailsOf(key).some(e => want.has(e))) out.push(await pgp.describe(key));
     }
     return out;
+  });
+
+  // 1.13.0: a key imported from "Find key online" goes to the contact for that
+  // address (as typed, or the real one inside an addy.io address) if it has none yet
+  // — the same as Sealpost Web. Returns the contact's name, or null.
+  handle('contacts:assignFound', (email, fp) => {
+    const e = String(email || '').trim().toLowerCase();
+    const c = contacts.byEmail(e) || contacts.byEmail(pgp.keyAddress(e));
+    fp = String(fp || '').toUpperCase();
+    if (!c || c.keyFp || !pgp.publicKeys.has(fp)) return null;
+    contacts.pinKey(c.id, fp);
+    return c.name || c.emails[0];
   });
 
   // paste/import a key and assign it to this contact

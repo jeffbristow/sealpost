@@ -15,7 +15,7 @@
  *   8. Finding keys online (WKD + keys.openpgp.org, through your server) (1.4.0)
  * ===================================================================== */
 
-import { $, $$, esc, show, toast, dialog, confirmBox, download, copyText, pickFiles, promptPassphrase } from './ui.js?v=1.10.1';
+import { $, $$, esc, show, toast, dialog, confirmBox, download, copyText, pickFiles, promptPassphrase } from './ui.js?v=1.11.0';
 
 export function initPeople(ctx) {
   const { state, keyring } = ctx;
@@ -273,10 +273,11 @@ export function initPeople(ctx) {
     // assign to the sender's contact (create the contact if needed)
     if (from) {
       const f = from.toLowerCase();
-      const match = keys.find(k => k.getUserIDs().some(u => u.toLowerCase().includes(f)));
+      const kf = keyring.keyAddress(f);   // 1.11.0: an addy.io sender's key carries the real address
+      const match = keys.find(k => k.getUserIDs().some(u => u.toLowerCase().includes(f) || u.toLowerCase().includes(kf)));
       if (match) {
         const fp = match.getFingerprint().toUpperCase();
-        const c = state.vault.contacts.find(x => (x.emails || []).includes(f));
+        const c = state.vault.contacts.find(x => (x.emails || []).includes(f)) || state.vault.contacts.find(x => (x.emails || []).includes(kf));
         if (c && !c.keyFp) changes.push({ id: 'contact:' + c.id, type: 'contact', data: { ...c, keyFp: fp, updated: now() } });
         if (!c) { const id = crypto.randomUUID(); changes.push({ id: 'contact:' + id, type: 'contact', data: { id, name, emails: [f], keyFp: fp, encrypt: 'auto', sign: 'auto', notes: '', created: now(), updated: now() } }); }
       }
@@ -422,8 +423,10 @@ export function initPeople(ctx) {
   async function lookupDialog(email = '') {
     let results = [];
     const search = async () => {
-      const q = $('#luEmail').value.trim();
-      $('#luOut').innerHTML = '<p class="muted small">Searching…</p>';
+      const asked = $('#luEmail').value.trim();
+      const q = keyring.keyAddress(asked);   // 1.11.0: an addy.io address is searched as the real recipient inside it
+      const note = q !== asked.toLowerCase() ? `<p class="muted small">addy.io address — searching for the real recipient, <b>${esc(q)}</b>.</p>` : '';
+      $('#luOut').innerHTML = note + '<p class="muted small">Searching…</p>';
       try {
         const r = await ctx.vault.post('keys.php', 'lookup', { email: q });
         results = [];
@@ -433,12 +436,12 @@ export function initPeople(ctx) {
         }
         const seen = new Set();
         results = results.filter(x => { const fp = x.key.getFingerprint(); if (seen.has(fp)) return false; seen.add(fp); return true; });
-        $('#luOut').innerHTML = results.length ? results.map((x, i) => `
+        $('#luOut').innerHTML = note + (results.length ? results.map((x, i) => `
           <div class="lookup-result"><b>${esc(x.key.getUserIDs().join(', '))}</b> <span class="muted small">from ${esc(x.source)}</span>
             <div class="fp">${esc(x.key.getFingerprint().toUpperCase().replace(/(.{4})/g, '$1 '))}</div>
             <div class="small muted">Created ${esc(x.key.getCreationTime().toLocaleDateString())}${keyring.publicKeys.has(x.key.getFingerprint().toUpperCase()) ? ' · already in your keyring' : ''}</div>
             <button class="btn small primary" data-lu="${i}" type="button">Import</button></div>`).join('')
-          : `<p class="muted">No key found for ${esc(q)}.${r.errors.length ? '<br>' + r.errors.map(esc).join('<br>') : ''}</p>`;
+          : `<p class="muted">No key found for ${esc(q)}.${r.errors.length ? '<br>' + r.errors.map(esc).join('<br>') : ''}</p>`);
       } catch (e) { $('#luOut').innerHTML = `<p class="error">${esc(e.message)}</p>`; }
     };
     let imported = false;
@@ -460,7 +463,8 @@ export function initPeople(ctx) {
         const changes = [{ id: 'key:' + fp, type: 'key', data: await keyring.importData(x.key, keyItem(fp)) }];
         // the person becomes a contact with this key (or their contact gets it, if it had none)
         const em = ($('#luEmail').value || '').trim().toLowerCase();
-        const c = state.vault.contacts.find(y => (y.emails || []).includes(em));
+        const kem = keyring.keyAddress(em);   // 1.11.0: or the contact of the real recipient inside an addy.io address
+        const c = state.vault.contacts.find(y => (y.emails || []).includes(em)) || state.vault.contacts.find(y => (y.emails || []).includes(kem));
         if (c && !c.keyFp) changes.push({ id: 'contact:' + c.id, type: 'contact', data: { ...c, keyFp: fp, updated: now() } });
         await ctx.save(changes);
         imported = true;

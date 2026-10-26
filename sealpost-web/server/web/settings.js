@@ -12,8 +12,9 @@
  *   4. Import a Sealpost backup (.sealbackup) — opened in this browser
  * ===================================================================== */
 
-import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.10.1';
-import { openpgp } from './pgp.js?v=1.10.1';
+import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.11.0';
+import { openpgp } from './pgp.js?v=1.11.0';
+import { cleanDomains } from './addy.js?v=1.11.0';   // 1.11.0
 
 /* Server settings for common providers (same list as Sealpost on your PC) */
 const PRESETS = [
@@ -47,6 +48,8 @@ export function initSettings(ctx) {
     $('#stAutoContacts').checked = s.autoAddContacts !== false;
     $('#stCache').value = Number.isFinite(Number(s.passphraseCacheMinutes)) ? Number(s.passphraseCacheMinutes) : 15;
     $('#stPage').value = Number(s.pageSize) || 50;
+    $('#stAddy').checked = !!s.addyRecipients;                       // 1.11.0
+    $('#stAddyDomains').value = (s.addyDomains || []).join(', ');
     renderAccounts();
   }
 
@@ -63,7 +66,9 @@ export function initSettings(ctx) {
       composeFormat: $('#stFormat').value,
       autoAddContacts: $('#stAutoContacts').checked,
       passphraseCacheMinutes: Math.max(0, Math.min(480, Number($('#stCache').value) || 0)),
-      pageSize: Math.max(10, Math.min(200, Number($('#stPage').value) || 50))
+      pageSize: Math.max(10, Math.min(200, Number($('#stPage').value) || 50)),
+      addyRecipients: $('#stAddy').checked,                          // 1.11.0
+      addyDomains: cleanDomains($('#stAddyDomains').value)
     };
     for (const k of LOCAL_SETTINGS) delete data[k];
     try { await ctx.save([{ id: 'settings:main', type: 'settings', data }]); toast('Settings saved — they apply on your PCs too.'); }
