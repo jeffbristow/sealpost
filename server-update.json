@@ -1,7 +1,7 @@
 {
-  "version": "1.10.1",
-  "url": "https://github.com/jeffbristow/sealpost/releases/download/server-v1.10.1/Sealpost-Web-Server-1.10.1.zip",
-  "sha256": "aea61556e2c508a3d5021fc84d0c0c5273a5da66bc2e33e3113937200009341d",
-  "size": "484 KB",
-  "note": "Example addresses now use example.com; downloads and updates link to GitHub."
+  "version": "1.11.0",
+  "url": "https://github.com/jeffbristow/sealpost/releases/download/server-v1.11.0/Sealpost-Web-Server-1.11.0.zip",
+  "sha256": "88c18cf584f39fbf60e3975bcf0ba2c3fcab75acb3a391dbfd38680dfd991265",
+  "size": "487 KB",
+  "note": "addy.io aliases: with Settings -> I use addy.io, keys for addy.io addresses are found, assigned and used for the real recipient."
 }
