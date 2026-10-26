@@ -200,6 +200,14 @@ New in 1.10.0 — one-click updates
     are one click.
   - Also: status.php has a "One-click updates" line.
 
+New in 1.11.1
+  - Folder icons: tap a folder's ... (or right-click it) -> "Choose icon..."
+    and pick an icon; a pinned folder can show its own icon instead of the
+    pin. "Use default icon" puts the usual one back. Renamed or moved
+    folders keep their icon. Same as Sealpost 1.13.1 on your PCs (it syncs).
+  - Updating: upload everything except config.php (the whole web/
+    folder), or use the one-click update.
+
 New in 1.11.0
   - addy.io aliases: Settings -> "I use addy.io". Writing through an
     addy.io alias puts the real recipient inside the To address
@@ -220,7 +228,7 @@ New in 1.10.1
   - Downloads and updates: https://github.com/jeffbristow/sealpost/releases
 
 Quick test after updating (5 minutes)
-  [ ] status.php shows all green and "Server version 1.11.0"
+  [ ] status.php shows all green and "Server version 1.11.1"
   [ ] Sign in; Settings -> Mail accounts -> Edit -> Test connection
       says "Receiving and sending both work"
   [ ] Keys -> Find online… -> your own address finds your key (if you

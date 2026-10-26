@@ -118,8 +118,32 @@ class Store {
     if (!a) throw new Error('Account not found');
     if (Array.isArray(prefs.pinnedFolders)) a.pinnedFolders = [...new Set(prefs.pinnedFolders.map(String).filter(Boolean))].slice(0, 50);
     if (typeof prefs.conversationView === 'boolean') a.conversationView = prefs.conversationView;
+    if (prefs.folderIcons && typeof prefs.folderIcons === 'object') a.folderIcons = Store.cleanFolderIcons(prefs.folderIcons);   // 1.13.1
     this._save();
     return this.listAccounts().find(x => x.id === id);
+  }
+
+  /** 1.13.1: own folder icons, { folder path: emoji }. */
+  static cleanFolderIcons(obj) {
+    const out = {};
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+    for (const [p, ic] of Object.entries(obj).slice(0, 200)) {
+      const icon = String(ic || '').trim();
+      if (p && icon && icon.length <= 16) out[String(p)] = icon;
+    }
+    return out;
+  }
+
+  /** 1.13.1: pins and icons follow a renamed / moved / deleted folder. fn(path) -> new path, or null when it's gone. */
+  followFolders(id, fn) {
+    const a = this.data.accounts.find(x => x.id === id);
+    if (!a) return;
+    const pins = (a.pinnedFolders || []).map(fn).filter(p => p != null);
+    const icons = {};
+    for (const [p, ic] of Object.entries(a.folderIcons || {})) { const q = fn(p); if (q != null) icons[q] = ic; }
+    if (JSON.stringify(pins) !== JSON.stringify(a.pinnedFolders || []) || JSON.stringify(icons) !== JSON.stringify(a.folderIcons || {})) {
+      this.setAccountPrefs(id, { pinnedFolders: pins, folderIcons: icons });
+    }
   }
 
   // Public list: passwords are stripped before anything reaches the UI
@@ -163,6 +187,8 @@ class Store {
       // 1.10.0: folders pinned to the top of the folder list, and the conversation view switch (off unless turned on)
       pinnedFolders: Array.isArray(acc.pinnedFolders) ? [...new Set(acc.pinnedFolders.map(String).filter(Boolean))].slice(0, 50) : (existing && existing.pinnedFolders) || [],
       conversationView: typeof acc.conversationView === 'boolean' ? acc.conversationView : !!(existing && existing.conversationView),
+      // 1.13.1: own folder icons (right-click a folder -> Choose icon…)
+      folderIcons: acc.folderIcons && typeof acc.folderIcons === 'object' ? Store.cleanFolderIcons(acc.folderIcons) : (existing && existing.folderIcons) || {},
       // keep old password if the form left the field blank
       password: acc.password ? this._protect(acc.password) : (existing ? existing.password : ''),
       smtpPassword: acc.smtpPassword ? this._protect(acc.smtpPassword) : (existing ? existing.smtpPassword : '')

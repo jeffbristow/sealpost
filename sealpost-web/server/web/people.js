@@ -15,7 +15,7 @@
  *   8. Finding keys online (WKD + keys.openpgp.org, through your server) (1.4.0)
  * ===================================================================== */
 
-import { $, $$, esc, show, toast, dialog, confirmBox, download, copyText, pickFiles, promptPassphrase } from './ui.js?v=1.11.0';
+import { $, $$, esc, show, toast, dialog, confirmBox, download, copyText, pickFiles, promptPassphrase } from './ui.js?v=1.11.1';
 
 export function initPeople(ctx) {
   const { state, keyring } = ctx;

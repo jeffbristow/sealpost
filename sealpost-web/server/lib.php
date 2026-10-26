@@ -41,7 +41,7 @@ if (!defined('SEALPOST')) {
  * 1. BOOTSTRAP + CONFIGURATION
  * ================================================================= */
 const SEALPOST_API_VERSION = 1;
-const SEALPOST_SERVER_VERSION = '1.11.0';
+const SEALPOST_SERVER_VERSION = '1.11.1';
 const WEB_SESSION_IDLE = 12 * 3600;   // seconds a web sign-in stays valid without use
 const PIN_DEVICE_IDLE = 30 * 86400;   // a phone / browser with PIN unlock is forgotten after 30 days unused (1.5.0)
 const PIN_MAX_FAILS = 5;              // wrong PINs before the device must sign in with the vault passphrase again

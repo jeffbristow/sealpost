@@ -12,7 +12,7 @@
  *   3. Settings → Server updates
  *   4. Install / undo
  * ===================================================================== */
-import { $, esc, show, toast, dialog, confirmBox, loading } from './ui.js?v=1.11.0';
+import { $, esc, show, toast, dialog, confirmBox, loading } from './ui.js?v=1.11.1';
 
 export function initUpdates(ctx) {
   let st = null;            // the last answer from update.php

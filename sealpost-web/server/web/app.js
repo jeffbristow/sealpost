@@ -24,17 +24,17 @@
  * settings.js, small shared helpers in ui.js.
  * ===================================================================== */
 
-import * as vault from './vault.js?v=1.11.0';
-import { Keyring } from './pgp.js?v=1.11.0';
-import { readMessage } from './reader.js?v=1.11.0';
-import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.11.0';
-import { initComposer } from './composer.js?v=1.11.0';
-import { initPeople } from './people.js?v=1.11.0';
-import { initTools } from './tools.js?v=1.11.0';
-import { initSettings } from './settings.js?v=1.11.0';
-import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.11.0';   // 1.6.0
-import { initUpdates } from './update.js?v=1.11.0';   // 1.10.0
-import { keyAddressFn } from './addy.js?v=1.11.0';   // 1.11.0
+import * as vault from './vault.js?v=1.11.1';
+import { Keyring } from './pgp.js?v=1.11.1';
+import { readMessage } from './reader.js?v=1.11.1';
+import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.11.1';
+import { initComposer } from './composer.js?v=1.11.1';
+import { initPeople } from './people.js?v=1.11.1';
+import { initTools } from './tools.js?v=1.11.1';
+import { initSettings } from './settings.js?v=1.11.1';
+import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.11.1';   // 1.6.0
+import { initUpdates } from './update.js?v=1.11.1';   // 1.10.0
+import { keyAddressFn } from './addy.js?v=1.11.1';   // 1.11.0
 
 /* =================================================================
  * 1. STATE + CONTEXT
@@ -569,8 +569,9 @@ function folderRow(a, f, { pinned = false, multi = false } = {}) {
   el.setAttribute('role', 'button'); el.tabIndex = 0;
   if (!pinned) el.style.paddingLeft = (10 + (f.depth || 0) * 14) + 'px';
   const label = pinned && multi ? `${esc(f.name)} <span class="muted small">· ${esc(a.email)}</span>` : esc(f.name);
-  el.innerHTML = `<span aria-hidden="true">${pinned ? '📌' : folderIcon(f)}</span><span class="name">${label}</span>${f.unseen ? `<span class="count">${f.unseen}</span>` : ''}<button type="button" class="folder-more" title="Folder options">⋯</button>`;
-  const menu = e => { e.preventDefault(); e.stopPropagation(); showMenu(e, folderMenuItems(a, f)); };
+  const icon = (a.folderIcons || {})[upath(f)] || defaultIcon(f, pinned);   // 1.11.1
+  el.innerHTML = `<span aria-hidden="true">${esc(icon)}</span><span class="name">${label}</span>${f.unseen ? `<span class="count">${f.unseen}</span>` : ''}<button type="button" class="folder-more" title="Folder options">⋯</button>`;
+  const menu = e => { e.preventDefault(); e.stopPropagation(); showMenu(e, folderMenuItems(a, f, pinned)); };
   el.querySelector('.folder-more').onclick = menu;
   el.oncontextmenu = menu;
   if (f.noselect) { el.classList.add('noselect'); el.title = 'This folder only holds other folders'; return el; }
@@ -591,11 +592,12 @@ const isSpecial = f => !!f.specialUse || f.path.toUpperCase() === 'INBOX';
 const upath = f => f.upath || f.path;
 const delimOf = accId => ((state.folders[accId] || []).find(f => f.delimiter) || {}).delimiter || '/';
 
-function folderMenuItems(a, f) {
+function folderMenuItems(a, f, inFavorites = false) {
   const pinned = (a.pinnedFolders || []).includes(upath(f));
   const items = [];
   if (!f.noselect) items.push({ label: '✓ Mark all as read', run: () => markFolderRead(a.id, f.path) }, '-');
   items.push({ label: pinned ? '📌 Unpin from top' : '📌 Pin to top', run: () => togglePin(a.id, upath(f)) });
+  items.push({ label: '🎨 Choose icon…', run: () => folderIconDialog(a, f, inFavorites) });   // 1.11.1
   items.push({ label: '＋ New subfolder…', run: () => newFolderDialog(a.id, f.path) });
   if (!isSpecial(f)) {
     items.push({ label: '✎ Rename…', run: () => renameFolderDialog(a.id, f) });
@@ -619,6 +621,50 @@ async function togglePin(accId, path) {
   catch (e) { toast(e.message, 'err'); }
 }
 
+/* 1.11.1: own folder icons. Right-click a folder -> Choose icon…; synced like pins. */
+const FOLDER_ICONS = [
+  ['Mail & folders', '📁 📂 🗂️ 📥 📤 📬 📮 ✉️ 📨 📝 📌 🔖 🏷️ ⭐ ❤️ 🔥 ⚡ ✅'],
+  ['Work & money', '💼 🏢 📊 📈 💰 💳 🧾 🏦 📄 📑 🗓️ ⏰ 🧮 🖨️'],
+  ['Home & people', '🏠 👪 👤 👥 🐶 🐱 🎁 🛒 🍽️ ☕ 🏥 💊 🎓 📚'],
+  ['Travel & fun', '✈️ 🚗 🏖️ 🗺️ 🎵 🎮 🎬 📷 ⚽ ⚾ 🏀 🎨 🧩 🌱'],
+  ['Tech & security', '💻 📱 🔒 🔑 🛡️ ⚙️ 🔔 🌐 🐞 🤖 📦 🧪'],
+  ['Colors', '🔴 🟠 🟡 🟢 🔵 🟣 🟤 ⚫ ⚪ 🟥 🟧 🟨 🟩 🟦 🟪']
+].map(([group, list]) => [group, list.split(' ')]);
+const defaultIcon = (f, pinned) => (pinned ? '📌' : folderIcon(f));
+
+async function folderIconDialog(a, f, pinned) {
+  const key = upath(f), cur = (a.folderIcons || {})[key] || '';
+  const p = dialog({
+    title: 'Folder icon', okText: 'Use this icon', extraText: cur ? 'Use default icon' : null,
+    html: `<p class="small">Pick an icon for <b>${esc(f.name)}</b>. It shows wherever the folder is listed, also under Favorites, and syncs to your other devices.</p>
+      <div class="icon-picker">${FOLDER_ICONS.map(([g, list]) => `<div class="icon-group">${esc(g)}</div><div class="icon-grid">${list.map(ic =>
+        `<button type="button" class="icon-pick${ic === cur ? ' sel' : ''}" data-icon="${ic}">${ic}</button>`).join('')}</div>`).join('')}</div>
+      <p id="icErr" class="error"></p>`,
+    onOk: () => {
+      const s = document.querySelector('#dlgBody .icon-pick.sel');
+      if (s) return s.dataset.icon;
+      document.querySelector('#icErr').textContent = 'Click an icon first.';
+      return false;
+    }
+  });
+  document.querySelectorAll('#dlgBody .icon-pick').forEach(b => {
+    b.onclick = () => { document.querySelectorAll('#dlgBody .icon-pick.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); };
+    b.ondblclick = () => { b.onclick(); document.querySelector('#dlgOk').click(); };
+  });
+  const r = await p;
+  if (r === 'extra') return setFolderIcon(a.id, key, '');
+  if (r && r !== cur) return setFolderIcon(a.id, key, r);
+}
+
+async function setFolderIcon(accId, path, icon) {
+  const a = account(accId);
+  if (!a) return;
+  const next = { ...(a.folderIcons || {}) };
+  if (icon) next[path] = icon; else delete next[path];
+  try { await saveAccountPrefs(accId, { folderIcons: next }); renderTree(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
 async function setConversation(accId, on) {
   try { await saveAccountPrefs(accId, { conversationView: on }); }
   catch (e) { return toast(e.message, 'err'); }
@@ -627,16 +673,17 @@ async function setConversation(accId, on) {
   toast(`Conversation view ${on ? 'on' : 'off'} for ${(account(accId) || {}).email || 'this account'}.`);
 }
 
-/** Pins that point into a renamed / deleted folder follow it. */
+/** Pins and folder icons that point into a renamed / deleted folder follow it. */
 async function fixPins(accId, from, to) {   // from / to: readable paths
   const a = account(accId), d = delimOf(accId);
-  if (!a || !(a.pinnedFolders || []).length) return;
-  const next = [];
-  for (const p of a.pinnedFolders) {
-    if (p === from || p.startsWith(from + d)) { if (to != null) next.push(to + p.slice(from.length)); }
-    else next.push(p);
+  if (!a) return;
+  const moved = p => (p === from || p.startsWith(from + d) ? (to == null ? null : to + p.slice(from.length)) : p);
+  const pins = (a.pinnedFolders || []).map(moved).filter(p => p != null);
+  const icons = {};
+  for (const [p, ic] of Object.entries(a.folderIcons || {})) { const q = moved(p); if (q != null) icons[q] = ic; }
+  if (JSON.stringify(pins) !== JSON.stringify(a.pinnedFolders || []) || JSON.stringify(icons) !== JSON.stringify(a.folderIcons || {})) {
+    await saveAccountPrefs(accId, { pinnedFolders: pins, folderIcons: icons });
   }
-  if (next.join('\n') !== a.pinnedFolders.join('\n')) await saveAccountPrefs(accId, { pinnedFolders: next });
 }
 
 function askFolderName(title, intro, value, accId) {

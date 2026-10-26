@@ -706,21 +706,19 @@ function registerIpc() {
     const { delim, under } = await folderPaths(accId, from);
     await mail.renameFolder(accId, from, to);
     if (cacheOn()) for (const p of under) cache.dropFolder(accId, p);
-    const acc = store.listAccounts().find(a => a.id === accId);
     const moved = p => (p === from ? to : p.startsWith(from + delim) ? to + p.slice(from.length) : p);
-    if (acc && (acc.pinnedFolders || []).some(p => moved(p) !== p)) store.setAccountPrefs(accId, { pinnedFolders: acc.pinnedFolders.map(moved) });
+    store.followFolders(accId, moved);   // pins + icons (1.13.1)
     return true;
   }, () => { throw offlineError('Renaming folders needs a connection.'); }));
   handle('mail:deleteFolder', (accId, folderPath) => netOr(accId, async () => {
     const { delim, under } = await folderPaths(accId, folderPath);
     await mail.deleteFolder(accId, folderPath);
     if (cacheOn()) for (const p of under) cache.dropFolder(accId, p);
-    const acc = store.listAccounts().find(a => a.id === accId);
     const gone = p => p === folderPath || p.startsWith(folderPath + delim);
-    if (acc && (acc.pinnedFolders || []).some(gone)) store.setAccountPrefs(accId, { pinnedFolders: acc.pinnedFolders.filter(p => !gone(p)) });
+    store.followFolders(accId, p => (gone(p) ? null : p));
     return true;
   }, () => { throw offlineError('Deleting folders needs a connection.'); }));
-  // pins + conversation view switch (synced to your other devices)
+  // pins, folder icons + conversation view switch (synced to your other devices)
   handle('accounts:setPrefs', (accId, prefs) => store.setAccountPrefs(accId, prefs || {}));
 
   /* ---------- 1.10.0: All Inboxes ----------

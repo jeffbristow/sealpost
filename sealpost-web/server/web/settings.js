@@ -12,9 +12,9 @@
  *   4. Import a Sealpost backup (.sealbackup) — opened in this browser
  * ===================================================================== */
 
-import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.11.0';
-import { openpgp } from './pgp.js?v=1.11.0';
-import { cleanDomains } from './addy.js?v=1.11.0';   // 1.11.0
+import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.11.1';
+import { openpgp } from './pgp.js?v=1.11.1';
+import { cleanDomains } from './addy.js?v=1.11.1';   // 1.11.0
 
 /* Server settings for common providers (same list as Sealpost on your PC) */
 const PRESETS = [

@@ -330,9 +330,10 @@ function folderRow(a, f, { pinned = false, multi = false } = {}) {
   el.className = 'folder' + (pinned ? ' fav' : '') + (a.id === state.cur.accId && f.path === state.cur.folder ? ' active' : '');
   if (!pinned) el.style.paddingLeft = (10 + (f.depth || 0) * 14) + 'px';
   const label = pinned && multi ? `${f.name} <span class="muted small">· ${esc(a.email)}</span>` : esc(f.name);
-  el.innerHTML = `<span>${pinned ? '📌' : folderIcon(f)}</span><span class="name">${label}</span>${f.unseen ? `<span class="count">${f.unseen}</span>` : ''}`;
+  const icon = (a.folderIcons || {})[f.path] || defaultIcon(f, pinned);   // 1.13.1
+  el.innerHTML = `<span>${esc(icon)}</span><span class="name">${label}</span>${f.unseen ? `<span class="count">${f.unseen}</span>` : ''}`;
   if (pinned) el.title = `${a.email} › ${f.path}`;
-  el.oncontextmenu = e => { e.preventDefault(); showMenu(e, folderMenuItems(a, f)); };
+  el.oncontextmenu = e => { e.preventDefault(); showMenu(e, folderMenuItems(a, f, pinned)); };
   if (f.noselect) { el.classList.add('noselect'); el.title = 'This folder only holds other folders'; return el; }   // 1.9.1
   el.onclick = () => { switchView('mail'); selectFolder(a.id, f.path); };
   // 1.10.0: drop messages here to move them
@@ -351,11 +352,12 @@ function folderRow(a, f, { pinned = false, multi = false } = {}) {
 const isSpecial = f => !!f.specialUse || f.path.toUpperCase() === 'INBOX';
 const delimOf = accId => ((state.folders[accId] || []).find(f => f.delimiter) || {}).delimiter || '/';
 
-function folderMenuItems(a, f) {
+function folderMenuItems(a, f, inFavorites = false) {
   const pinned = (a.pinnedFolders || []).includes(f.path);
   const items = [];
   if (!f.noselect) items.push({ label: '✓ Mark all as read', run: () => markFolderRead(a.id, f.path) }, '-');
   items.push({ label: pinned ? '📌 Unpin from top' : '📌 Pin to top', run: () => togglePin(a.id, f.path) });
+  items.push({ label: '🎨 Choose icon…', run: () => folderIconDialog(a, f, inFavorites) });   // 1.13.1
   items.push({ label: '＋ New subfolder…', run: () => newFolderDialog(a.id, f.path) });
   if (!isSpecial(f)) {
     items.push({ label: '✎ Rename…', run: () => renameFolderDialog(a.id, f) });
@@ -376,6 +378,50 @@ async function togglePin(accId, path) {
   const list = a.pinnedFolders || [];
   const next = list.includes(path) ? list.filter(p => p !== path) : [...list, path];
   try { await call('accountsSetPrefs', accId, { pinnedFolders: next }); a.pinnedFolders = next; renderTree(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
+/* 1.13.1: own folder icons. Right-click a folder -> Choose icon…; synced like pins. */
+const FOLDER_ICONS = [
+  ['Mail & folders', '📁 📂 🗂️ 📥 📤 📬 📮 ✉️ 📨 📝 📌 🔖 🏷️ ⭐ ❤️ 🔥 ⚡ ✅'],
+  ['Work & money', '💼 🏢 📊 📈 💰 💳 🧾 🏦 📄 📑 🗓️ ⏰ 🧮 🖨️'],
+  ['Home & people', '🏠 👪 👤 👥 🐶 🐱 🎁 🛒 🍽️ ☕ 🏥 💊 🎓 📚'],
+  ['Travel & fun', '✈️ 🚗 🏖️ 🗺️ 🎵 🎮 🎬 📷 ⚽ ⚾ 🏀 🎨 🧩 🌱'],
+  ['Tech & security', '💻 📱 🔒 🔑 🛡️ ⚙️ 🔔 🌐 🐞 🤖 📦 🧪'],
+  ['Colors', '🔴 🟠 🟡 🟢 🔵 🟣 🟤 ⚫ ⚪ 🟥 🟧 🟨 🟩 🟦 🟪']
+].map(([group, list]) => [group, list.split(' ')]);
+const defaultIcon = (f, pinned) => (pinned ? '📌' : folderIcon(f));
+
+async function folderIconDialog(a, f, pinned) {
+  const key = f.path, cur = (a.folderIcons || {})[key] || '';
+  const p = dialog({
+    title: 'Folder icon', okText: 'Use this icon', extraText: cur ? 'Use default icon' : null,
+    html: `<p class="small">Pick an icon for <b>${esc(f.name)}</b>. It shows wherever the folder is listed, also under Favorites, and syncs to your other devices.</p>
+      <div class="icon-picker">${FOLDER_ICONS.map(([g, list]) => `<div class="icon-group">${esc(g)}</div><div class="icon-grid">${list.map(ic =>
+        `<button type="button" class="icon-pick${ic === cur ? ' sel' : ''}" data-icon="${ic}">${ic}</button>`).join('')}</div>`).join('')}</div>
+      <p id="icErr" class="error"></p>`,
+    onOk: () => {
+      const s = document.querySelector('#dlgBody .icon-pick.sel');
+      if (s) return s.dataset.icon;
+      document.querySelector('#icErr').textContent = 'Click an icon first.';
+      return false;
+    }
+  });
+  document.querySelectorAll('#dlgBody .icon-pick').forEach(b => {
+    b.onclick = () => { document.querySelectorAll('#dlgBody .icon-pick.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); };
+    b.ondblclick = () => { b.onclick(); document.querySelector('#dlgOk').click(); };
+  });
+  const r = await p;
+  if (r === 'extra') return setFolderIcon(a.id, key, '');
+  if (r && r !== cur) return setFolderIcon(a.id, key, r);
+}
+
+async function setFolderIcon(accId, path, icon) {
+  const a = state.accounts.find(x => x.id === accId);
+  if (!a) return;
+  const next = { ...(a.folderIcons || {}) };
+  if (icon) next[path] = icon; else delete next[path];
+  try { await call('accountsSetPrefs', accId, { folderIcons: next }); a.folderIcons = next; renderTree(); }
   catch (e) { toast(e.message, 'err'); }
 }
 

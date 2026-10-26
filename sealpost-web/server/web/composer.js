@@ -16,9 +16,9 @@
  *   7. Send
  * ===================================================================== */
 
-import { $, $$, esc, escHtml, show, addr, fmtDate, fmtSize, toast, dialog, confirmBox, withPassphrase, pickFiles } from './ui.js?v=1.11.0';
-import { composeMessage, buildDraft, parseAddressList, detectType, htmlToPlain } from './compose.js?v=1.11.0';
-import { readDraft } from './reader.js?v=1.11.0';
+import { $, $$, esc, escHtml, show, addr, fmtDate, fmtSize, toast, dialog, confirmBox, withPassphrase, pickFiles } from './ui.js?v=1.11.1';
+import { composeMessage, buildDraft, parseAddressList, detectType, htmlToPlain } from './compose.js?v=1.11.1';
+import { readDraft } from './reader.js?v=1.11.1';
 
 const MAX_ATTACH = 25 * 1048576;
 
