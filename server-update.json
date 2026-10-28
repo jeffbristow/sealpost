@@ -1,7 +1,7 @@
 {
-  "version": "1.11.1",
-  "url": "https://github.com/jeffbristow/sealpost/releases/download/server-v1.11.1/Sealpost-Web-Server-1.11.1.zip",
-  "sha256": "f86714a5f003c5b474e7135b0598e42fcee8c9dbb2a19acf74ba6ff6e46227bb",
-  "size": "488 KB",
-  "note": "Folder icons: right-click a folder (or tap ...) -> Choose icon... A pinned folder can show its own icon instead of the pin."
+  "version": "1.11.2",
+  "url": "https://github.com/jeffbristow/sealpost/releases/download/server-v1.11.2/Sealpost-Web-Server-1.11.2.zip",
+  "sha256": "82fdc73fd22092680e84bd63c56b99edd409160bd2ac0a84deed645b432d72ce",
+  "size": "490 KB",
+  "note": "Arrange your accounts (up/down in Settings -> Mail accounts) and choose the folder Sealpost opens at start."
 }
