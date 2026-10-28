@@ -144,11 +144,38 @@ class Store {
     if (JSON.stringify(pins) !== JSON.stringify(a.pinnedFolders || []) || JSON.stringify(icons) !== JSON.stringify(a.folderIcons || {})) {
       this.setAccountPrefs(id, { pinnedFolders: pins, folderIcons: icons });
     }
+    // 1.13.2: so does the folder Sealpost opens at start
+    const sf = this.data.settings.startFolder;
+    if (sf && sf.accId === id && sf.path) {
+      const q = fn(sf.path);
+      if (q !== sf.path) this.setSettings({ startFolder: q == null ? null : { accId: id, path: q } });
+    }
+  }
+
+  /** 1.13.2: accounts in the order you arranged them (settings.accountOrder, a list of
+   *  account ids). Accounts not in the list keep their place after the others.
+   *  Same function in Sealpost Web (web/vault.js) — keep both identical. */
+  static orderAccounts(accounts, order) {
+    const pos = new Map((Array.isArray(order) ? order : []).map((id, i) => [String(id), i]));
+    const at = (a, i) => (pos.has(a.id) ? pos.get(a.id) : pos.size + i);
+    return accounts.map((a, i) => [at(a, i), a]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+  }
+
+  /** 1.13.2: tidy the synced start-up choices. accountOrder = [ids];
+   *  startFolder = { accId, path } (accId '__all__' = All Inboxes) or null = first account's Inbox. */
+  static cleanStartPrefs(patch) {
+    const out = { ...patch };
+    if ('accountOrder' in out) out.accountOrder = Array.isArray(out.accountOrder) ? [...new Set(out.accountOrder.map(String).filter(Boolean))].slice(0, 100) : [];
+    if ('startFolder' in out) {
+      const sf = out.startFolder;
+      out.startFolder = sf && typeof sf === 'object' && sf.accId && sf.path ? { accId: String(sf.accId), path: String(sf.path) } : null;
+    }
+    return out;
   }
 
   // Public list: passwords are stripped before anything reaches the UI
   listAccounts() {
-    return this.data.accounts.map(a => {
+    return Store.orderAccounts(this.data.accounts, this.data.settings.accountOrder).map(a => {   // 1.13.2: your order
       const { password, smtpPassword, ...rest } = a;
       return { ...rest, hasPassword: !!password };
     });

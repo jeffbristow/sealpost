@@ -151,6 +151,7 @@ h2 { font-size: 20px; } h3 { font-size: 15px; margin-top: 14px; }
 .panel textarea { font-family: var(--mono); font-size: 12.5px; }
 .account-list .acct { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); margin-top: 8px; }
 .acct .info { flex: 1; overflow: hidden; } .acct .info div { overflow: hidden; text-overflow: ellipsis; }
+.acct-order { display: flex; gap: 4px; }   /* 1.13.2 */
 
 /* ---------- 9. Forms + buttons ---------- */
 label { font-size: 12px; color: var(--text-2); margin-top: 6px; display: block; }

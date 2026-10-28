@@ -200,6 +200,17 @@ New in 1.10.0 — one-click updates
     are one click.
   - Also: status.php has a "One-click updates" line.
 
+New in 1.11.2
+  - Arrange your accounts: Settings -> Mail accounts has up / down buttons
+    (or tap an account's ... -> "Move account up / down"). The folder list,
+    All Inboxes and every account list follow that order.
+  - Choose where Sealpost opens: Settings -> "When Sealpost starts, open"
+    (the first account's Inbox, All Inboxes or any folder), or a folder's
+    ... -> "Open here when Sealpost starts". Same as Sealpost 1.13.2 on your
+    PCs (both sync).
+  - Updating: upload everything except config.php (the whole web/
+    folder), or use the one-click update.
+
 New in 1.11.1
   - Folder icons: tap a folder's ... (or right-click it) -> "Choose icon..."
     and pick an icon; a pinned folder can show its own icon instead of the
@@ -228,7 +239,7 @@ New in 1.10.1
   - Downloads and updates: https://github.com/jeffbristow/sealpost/releases
 
 Quick test after updating (5 minutes)
-  [ ] status.php shows all green and "Server version 1.11.1"
+  [ ] status.php shows all green and "Server version 1.11.2"
   [ ] Sign in; Settings -> Mail accounts -> Edit -> Test connection
       says "Receiving and sending both work"
   [ ] Keys -> Find online… -> your own address finds your key (if you

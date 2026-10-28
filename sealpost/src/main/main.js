@@ -565,6 +565,7 @@ function registerIpc() {
   handle('settings:set', patch => {
     const { appLock, ...rest } = patch || {};
     if ('addyDomains' in rest) rest.addyDomains = addy.cleanDomains(rest.addyDomains);   // 1.13.0
+    Object.assign(rest, Store.cleanStartPrefs(rest));                                      // 1.13.2
     const pushBefore = store.getSettings().pushMail !== false;
     store.setSettings(rest);
     if ((store.getSettings().pushMail !== false) !== pushBefore) applyPushSetting(); // 1.2.0

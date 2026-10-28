@@ -278,6 +278,8 @@ $v = SEALPOST_SERVER_VERSION;
         <input type="text" id="stCache" inputmode="numeric">
         <label for="stPage">Messages per page</label>
         <input type="text" id="stPage" inputmode="numeric">
+        <label for="stStart">When Sealpost starts, open</label>
+        <select id="stStart"></select>
         <h3>addy.io aliases</h3>
         <label class="check"><input type="checkbox" id="stAddy"> I use addy.io — use the real recipient's key for addy.io addresses</label>
         <p class="muted small">Writing through an addy.io alias puts the real address inside the To address: <code>shop+sam=example.org@example.com</code> goes to <b>sam@example.org</b>. With this on, Sealpost encrypts to, searches for and assigns the key of that real address. The To address stays as it is, so the mail still goes through addy.io. addy.io's own domains and the domains of your "Send as" addresses are recognised by themselves.</p>
@@ -289,6 +291,7 @@ $v = SEALPOST_SERVER_VERSION;
       <div class="panel">
         <div class="row-between"><h3>Mail accounts</h3><button id="stAddAccount" class="btn small primary" type="button">+ Add account</button></div>
         <div id="stAccounts"></div>
+        <p class="muted small">With more than one account, ▲ ▼ change the order they're listed in. The order syncs to your PCs.</p>
         <p class="muted small">Account signatures are edited here too (Edit → Signature).</p>
         <h3>Import a Sealpost backup</h3>
         <p class="muted small">Opens a <b>.sealbackup</b> file in this browser with its backup passphrase and adds its accounts, contacts and keys to your vault — they then sync to your PCs. Nothing already there is deleted.</p>

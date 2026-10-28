@@ -18,7 +18,7 @@
 /* =================================================================
  * 1. WHAT MAY BE KEPT
  * ================================================================= */
-const CACHE = 'sealpost-shell-1.11.1';
+const CACHE = 'sealpost-shell-1.11.2';
 const SHELL = ['./', 'manifest.webmanifest', 'web/icon.png', 'web/icons/apple-touch-icon.png'];
 
 function mayKeep(url, request) {

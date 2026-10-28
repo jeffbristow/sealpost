@@ -12,9 +12,9 @@
  *   4. Import a Sealpost backup (.sealbackup) — opened in this browser
  * ===================================================================== */
 
-import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.11.1';
-import { openpgp } from './pgp.js?v=1.11.1';
-import { cleanDomains } from './addy.js?v=1.11.1';   // 1.11.0
+import { $, $$, esc, show, toast, dialog, confirmBox, pickFiles } from './ui.js?v=1.11.2';
+import { openpgp } from './pgp.js?v=1.11.2';
+import { cleanDomains } from './addy.js?v=1.11.2';   // 1.11.0
 
 /* Server settings for common providers (same list as Sealpost on your PC) */
 const PRESETS = [
@@ -50,7 +50,23 @@ export function initSettings(ctx) {
     $('#stPage').value = Number(s.pageSize) || 50;
     $('#stAddy').checked = !!s.addyRecipients;                       // 1.11.0
     $('#stAddyDomains').value = (s.addyDomains || []).join(', ');
+    renderStartChoice();                                             // 1.11.2
     renderAccounts();
+  }
+
+  /* 1.11.2: "When Sealpost starts, open" — All Inboxes or any folder */
+  let startList = [];
+  function renderStartChoice() {
+    const sel = $('#stStart'), sf = state.vault.settings.startFolder || null;
+    startList = ctx.startChoices();
+    let html = '', group = null;
+    startList.forEach((c, i) => {
+      if (c.group !== group) { if (group) html += '</optgroup>'; if (c.group) html += `<optgroup label="${esc(c.group)}">`; group = c.group; }
+      html += `<option value="${i}">${esc(c.label)}</option>`;
+    });
+    sel.innerHTML = html + (group ? '</optgroup>' : '');
+    const at = startList.findIndex(c => (c.value ? !!sf && c.value.accId === sf.accId && c.value.path === sf.path : !sf));
+    sel.value = String(Math.max(0, at));
   }
 
   /* =================================================================
@@ -68,7 +84,8 @@ export function initSettings(ctx) {
       passphraseCacheMinutes: Math.max(0, Math.min(480, Number($('#stCache').value) || 0)),
       pageSize: Math.max(10, Math.min(200, Number($('#stPage').value) || 50)),
       addyRecipients: $('#stAddy').checked,                          // 1.11.0
-      addyDomains: cleanDomains($('#stAddyDomains').value)
+      addyDomains: cleanDomains($('#stAddyDomains').value),
+      startFolder: (startList[Number($('#stStart').value)] || {}).value || null   // 1.11.2
     };
     for (const k of LOCAL_SETTINGS) delete data[k];
     try { await ctx.save([{ id: 'settings:main', type: 'settings', data }]); toast('Settings saved — they apply on your PCs too.'); }
@@ -81,11 +98,14 @@ export function initSettings(ctx) {
   function renderAccounts() {
     const box = $('#stAccounts');
     const accs = state.vault.accounts;
-    box.innerHTML = accs.length ? accs.map(a => `
+    // 1.11.2: ▲ ▼ arrange the accounts (the sidebar and every account list follow this order)
+    const order = (a, i) => (accs.length > 1 ? `<button class="btn small" data-move="${esc(a.id)}" data-d="-1" type="button" title="Move up"${i ? '' : ' disabled'}>▲</button><button class="btn small" data-move="${esc(a.id)}" data-d="1" type="button" title="Move down"${i < accs.length - 1 ? '' : ' disabled'}>▼</button>` : '');
+    box.innerHTML = accs.length ? accs.map((a, i) => `
       <div class="acct-row"><div class="grow"><b>${esc(a.name || a.email)}</b><div class="muted small">${esc(a.email)} · ${esc(a.imapHost)}</div>${(a.aliases || []).length ? `<div class="muted small">Also sends as ${esc(a.aliases.map(x => x.email).join(', '))}</div>` : ''}</div>
-        <button class="btn small" data-edit="${esc(a.id)}" type="button">Edit</button></div>`).join('')
+        ${order(a, i)}<button class="btn small" data-edit="${esc(a.id)}" type="button">Edit</button></div>`).join('')
       : '<p class="muted">No mail accounts yet.</p>';
     $$('#stAccounts [data-edit]').forEach(b => { b.onclick = () => editAccount(b.dataset.edit); });
+    $$('#stAccounts [data-move]').forEach(b => { b.onclick = async () => { await ctx.moveAccount(b.dataset.move, Number(b.dataset.d)); renderAccounts(); renderStartChoice(); }; });
   }
   $('#stAddAccount').addEventListener('click', () => editAccount(null));
 

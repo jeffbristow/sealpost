@@ -212,13 +212,22 @@ export async function loadVault(prev = null) {
   return derive({ items, seqs, seq: since });
 }
 
+/** 1.11.2: accounts in the order you arranged them (settings.accountOrder, a list of
+ *  account ids). Accounts not in the list keep their place after the others.
+ *  Same function in Sealpost on your PC (store.js) — keep both identical. */
+export function orderAccounts(accounts, order) {
+  const pos = new Map((Array.isArray(order) ? order : []).map((id, i) => [String(id), i]));
+  const at = (a, i) => (pos.has(a.id) ? pos.get(a.id) : pos.size + i);
+  return accounts.map((a, i) => [at(a, i), a]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+}
+
 /** Lists the app works with, from the raw items. */
 function derive(v) {
   const of = type => [...v.items.values()].filter(e => e.type === type).map(e => e.data);
   const settingsEnv = v.items.get('settings:main');
   return {
     ...v,
-    accounts: of('account'),
+    accounts: orderAccounts(of('account'), settingsEnv && settingsEnv.data && settingsEnv.data.accountOrder),   // 1.11.2
     contacts: of('contact'),
     keys: [...v.items.entries()].filter(([id]) => id.startsWith('key:')).map(([id, e]) => ({ fingerprint: id.slice(4), ...e.data })),
     passphrases: new Map(of('passphrase').filter(p => p && p.fingerprint && p.passphrase).map(p => [p.fingerprint.toUpperCase(), p.passphrase])),

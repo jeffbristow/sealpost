@@ -41,8 +41,8 @@ A PGP email system with two halves that share one encrypted "vault":
 
 | Part | Folder | Tech | Current version |
 |------|--------|------|-----------------|
-| **Sealpost** — desktop IMAP/SMTP client (Windows 11, macOS 12+, Linux) | `sealpost/` | Electron 44 (macOS 12 build: Electron 43), Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.13.1) |
-| **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.11.1) |
+| **Sealpost** — desktop IMAP/SMTP client (Windows 11, macOS 12+, Linux) | `sealpost/` | Electron 44 (macOS 12 build: Electron 43), Node, OpenPGP.js 6, ImapFlow, Nodemailer, mailparser | `sealpost/package.json` → `version` (1.13.2) |
+| **Sealpost Server** — sync server + **Sealpost Web** (webmail, also an iPhone home-screen app) | `sealpost-web/server/` | Plain PHP 8 (no framework, no PHP imap extension), SQLite, vanilla JS + OpenPGP.js in the browser | `sealpost-web/server/lib.php` → `SEALPOST_SERVER_VERSION` (1.11.2) |
 
 The two version numbers are independent. Features that need both say so
 (e.g. "pinned folders sync with Windows 1.10.0 and later").
@@ -82,7 +82,7 @@ sealpost/                  desktop app
   src/renderer/            UI: index.html, styles.css, app.js (one large file, ~3200 lines)
   build/                   icons, afterPack.js (stamps icon/version into the .exe),
                            make-update.js, Install-Update.bat/.ps1 (for 1.0.0 installs)
-  test/                    pgp-test.js + one file per feature release (v110 … v1131)
+  test/                    pgp-test.js + one file per feature release (v110 … v1132)
 sealpost-web/
   server/                  everything uploaded to the website folder
     index.php              Sealpost Web page shell + strict CSP (no inline scripts, no CDNs)

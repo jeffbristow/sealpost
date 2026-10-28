@@ -326,6 +326,7 @@ textarea.compose-body { background: var(--bg); border: 1px solid var(--line); bo
 .row-between h3 { margin: 0; }
 .acct-row { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); margin-top: 8px; }
 .acct-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.acct-row .btn[disabled] { opacity: .35; }   /* 1.11.2: ▲ ▼ account order */
 .restore-summary { background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
 .restore-summary ul { margin: 6px 0 0; padding-left: 18px; }
 

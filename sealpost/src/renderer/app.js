@@ -254,7 +254,6 @@ async function loadAccounts() {
     return;
   }
   if (state.cur.accId === UNIFIED && state.accounts.length < 2) state.cur.accId = null;   // 1.10.0
-  if (!state.cur.accId || (state.cur.accId !== UNIFIED && !state.accounts.find(a => a.id === state.cur.accId))) { state.cur.accId = state.accounts[0].id; state.cur.folder = 'INBOX'; }
   // 1.9.2: show what's saved on this PC at once (offline mail), then the
   // server's folders as each account answers — a slow or unreachable
   // account no longer holds up the others or the message list.
@@ -262,6 +261,7 @@ async function loadAccounts() {
     if (state.folders[a.id] && state.folders[a.id].length) return;
     try { const f = await call('mailFoldersCached', a.id); if (f) state.folders[a.id] = f; } catch { /* nothing saved */ }
   }));
+  if (!state.cur.accId || (state.cur.accId !== UNIFIED && !state.accounts.find(a => a.id === state.cur.accId))) Object.assign(state.cur, startTarget());   // 1.13.2
   renderTree();
   selectFolder(state.cur.accId, state.cur.folder);
   await Promise.all(state.accounts.map(a => loadFolders(a.id)));
@@ -277,6 +277,40 @@ async function loadFolders(accId) {
   }
   renderTree();
 }
+
+/* ---------- 1.13.2: your account order + the folder Sealpost opens at start ----------
+ * Both are synced settings: accountOrder = [account ids] (store.js puts
+ * the accounts in that order), startFolder = { accId, path } — accId
+ * UNIFIED for All Inboxes — or null for the first account's Inbox. */
+const startPref = () => (state.settings && state.settings.startFolder) || null;
+const isStart = (accId, path) => { const sf = startPref(); return !!sf && sf.accId === accId && sf.path === path; };
+function startTarget() {
+  const sf = startPref();
+  if (sf && sf.accId === UNIFIED && state.accounts.length > 1) return { accId: UNIFIED, folder: 'INBOX' };
+  const a = sf && state.accounts.find(x => x.id === sf.accId);
+  const known = a && state.folders[a.id];
+  if (a && (!known || !known.length || known.some(f => f.path === sf.path && !f.noselect))) return { accId: a.id, folder: sf.path };
+  return { accId: state.accounts[0].id, folder: 'INBOX' };
+}
+async function setStartFolder(accId, path, name) {
+  try {
+    state.settings = await call('settingsSet', { startFolder: accId ? { accId, path } : null });
+    toast(accId ? `Sealpost will open ${name} when it starts.` : 'Sealpost will open the first account\'s Inbox when it starts.');
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function moveAccount(accId, delta) {
+  const ids = state.accounts.map(a => a.id), i = ids.indexOf(accId), j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  try {
+    state.settings = await call('settingsSet', { accountOrder: ids });
+    await refreshAccountsQuiet();
+    if ($('#view-settings').classList.contains('active')) { renderAccountList(); renderStartChoice(); }
+  } catch (e) { toast(e.message, 'err'); }
+}
+const startMenuItem = (accId, path, name) => (isStart(accId, path)
+  ? { label: '🏠 Stop opening here at start', run: () => setStartFolder(null) }
+  : { label: '🏠 Open here when Sealpost starts', run: () => setStartFolder(accId, path, name) });
 
 const folderIcon = f => ({ '\\Inbox': '📥', '\\Sent': '📤', '\\Drafts': '📝', '\\Trash': '🗑', '\\Junk': '⚠', '\\Archive': '🗄', '\\Flagged': '⚑', '\\All': '📚' }[f.specialUse] || '📁');
 
@@ -303,13 +337,13 @@ function renderTree() {
       el.innerHTML = `<span>📬</span><span class="name">All Inboxes</span>${unread ? `<span class="count">${unread}</span>` : ''}`;
       el.title = 'The Inbox of every account in one list';
       el.onclick = () => { switchView('mail'); selectFolder(UNIFIED, 'INBOX'); };
-      el.oncontextmenu = e => { e.preventDefault(); showMenu(e, [{ label: '✓ Mark all inboxes as read', run: () => markFolderRead(UNIFIED, 'INBOX') }]); };
+      el.oncontextmenu = e => { e.preventDefault(); showMenu(e, [{ label: '✓ Mark all inboxes as read', run: () => markFolderRead(UNIFIED, 'INBOX') }, startMenuItem(UNIFIED, 'INBOX', 'All Inboxes')]); };
       tree.appendChild(el);
     }
     for (const { a, f } of pins) tree.appendChild(folderRow(a, f, { pinned: true, multi }));
   }
 
-  for (const a of state.accounts) {
+  state.accounts.forEach((a, i) => {
     const lbl = document.createElement('div');
     lbl.className = 'acct-label';
     lbl.innerHTML = `<span class="acct-name">${esc(a.name ? `${a.name} · ${a.email}` : a.email)}</span><button class="acct-add" title="New folder">＋</button>`;
@@ -317,11 +351,14 @@ function renderTree() {
     lbl.querySelector('.acct-add').onclick = e => { e.stopPropagation(); newFolderDialog(a.id, null); };   // 1.10.0
     lbl.oncontextmenu = e => { e.preventDefault(); showMenu(e, [
       { label: '＋ New folder…', run: () => newFolderDialog(a.id, null) },
-      { label: (a.conversationView ? '☑' : '☐') + ' Conversation view', run: () => setConversation(a.id, !a.conversationView) }
+      { label: (a.conversationView ? '☑' : '☐') + ' Conversation view', run: () => setConversation(a.id, !a.conversationView) },
+      ...(multi ? ['-',   // 1.13.2
+        ...(i > 0 ? [{ label: '▲ Move account up', run: () => moveAccount(a.id, -1) }] : []),
+        ...(i < state.accounts.length - 1 ? [{ label: '▼ Move account down', run: () => moveAccount(a.id, 1) }] : [])] : [])
     ]); };
     tree.appendChild(lbl);
     for (const f of state.folders[a.id] || []) tree.appendChild(folderRow(a, f, {}));
-  }
+  });
 }
 
 /** One folder line in the sidebar (also used for pinned folders). */
@@ -357,6 +394,7 @@ function folderMenuItems(a, f, inFavorites = false) {
   const items = [];
   if (!f.noselect) items.push({ label: '✓ Mark all as read', run: () => markFolderRead(a.id, f.path) }, '-');
   items.push({ label: pinned ? '📌 Unpin from top' : '📌 Pin to top', run: () => togglePin(a.id, f.path) });
+  if (!f.noselect) items.push(startMenuItem(a.id, f.path, `"${f.name}"`));   // 1.13.2
   items.push({ label: '🎨 Choose icon…', run: () => folderIconDialog(a, f, inFavorites) });   // 1.13.1
   items.push({ label: '＋ New subfolder…', run: () => newFolderDialog(a.id, f.path) });
   if (!isSpecial(f)) {
@@ -2610,6 +2648,7 @@ async function loadSettingsView() {
   $('#setNotify').checked = s.notifyNewMail !== false;                       // 1.2.0
   $('#setAddy').checked = !!s.addyRecipients;                                // 1.13.0
   $('#setAddyDomains').value = (s.addyDomains || []).join(', ');             // 1.13.0
+  renderStartChoice();                                                       // 1.13.2
   renderLastBackup();                                                        // 1.2.0
   renderOfflinePanel();                                                      // 1.3.0
   renderCloudPanel();                                                        // 1.4.0
@@ -2668,19 +2707,47 @@ $('#btnSaveSettings').addEventListener('click', async () => {
     pushMail: $('#setPush').checked,
     notifyNewMail: $('#setNotify').checked,
     addyRecipients: $('#setAddy').checked,       // 1.13.0
-    addyDomains: $('#setAddyDomains').value
+    addyDomains: $('#setAddyDomains').value,
+    startFolder: $('#setStart').value ? JSON.parse($('#setStart').value) : null   // 1.13.2
   });
   renderPushStatus();
   toast('Settings saved');
 });
 
+/* 1.13.2: Settings -> "When Sealpost starts, open": All Inboxes or any folder */
+function renderStartChoice() {
+  const sel = $('#setStart'), sf = startPref();
+  const opt = (v, label) => `<option value="${esc(v ? JSON.stringify(v) : '')}">${esc(label)}</option>`;
+  let html = opt(null, 'The first account\'s Inbox');
+  if (state.accounts.length > 1) html += opt({ accId: UNIFIED, path: 'INBOX' }, 'All Inboxes');
+  for (const a of state.accounts) {
+    const folders = (state.folders[a.id] || []).filter(f => !f.noselect);
+    if (sf && sf.accId === a.id && !folders.some(f => f.path === sf.path)) folders.push({ path: sf.path, depth: 0 });   // not loaded yet
+    html += `<optgroup label="${esc(a.email)}">${folders.map(f => opt({ accId: a.id, path: f.path }, '\u00a0'.repeat((f.depth || 0) * 3) + (f.path.toUpperCase() === 'INBOX' ? 'Inbox' : f.name || f.path))).join('')}</optgroup>`;
+  }
+  sel.innerHTML = html;
+  sel.value = sf ? JSON.stringify({ accId: sf.accId, path: sf.path }) : '';
+  if (sel.selectedIndex < 0) sel.value = '';
+}
+
 function renderAccountList() {
   const box = $('#accountList');
   box.innerHTML = state.accounts.length ? '' : '<p class="muted">No accounts yet.</p>';
-  for (const a of state.accounts) {
+  state.accounts.forEach((a, i) => {
     const el = document.createElement('div');
     el.className = 'acct';
     el.innerHTML = `<div class="info"><div><b>${esc(a.name || a.email)}</b></div><div class="muted small">${esc(a.email)} · ${esc(a.imapHost)}</div>${(a.aliases || []).length ? `<div class="muted small">Also sends as ${esc(a.aliases.map(x => x.email).join(', '))}</div>` : ''}</div>`;
+    // 1.13.2: arrange the accounts (the sidebar and every account list follow this order)
+    if (state.accounts.length > 1) {
+      const ord = document.createElement('div'); ord.className = 'acct-order';
+      for (const [d, t, tip] of [[-1, '▲', 'Move up'], [1, '▼', 'Move down']]) {
+        const b = document.createElement('button'); b.className = 'btn small'; b.textContent = t; b.title = tip;
+        b.disabled = i + d < 0 || i + d >= state.accounts.length;
+        b.onclick = () => moveAccount(a.id, d);
+        ord.appendChild(b);
+      }
+      el.appendChild(ord);
+    }
     const e = document.createElement('button'); e.className = 'btn small'; e.textContent = 'Edit'; e.onclick = () => openAccountEditor(a);
     const d = document.createElement('button'); d.className = 'btn small danger'; d.textContent = 'Remove';
     d.onclick = async () => {
@@ -2691,7 +2758,7 @@ function renderAccountList() {
     };
     el.append(e, d);
     box.appendChild(el);
-  }
+  });
 }
 
 let presets = [];
@@ -3102,6 +3169,7 @@ window.api.onEvent(async ({ type, data }) => {
     // another PC changed something — refresh what's on screen
     if (data.settings) state.settings = await call('settingsGet');
     if (data.accounts && data.accounts.length) await loadAccounts();
+    else if (data.settings) await refreshAccountsQuiet();   // 1.13.2: the account order may have changed
     if (data.keys && $('#view-keys').classList.contains('active')) loadKeys();
     if (data.contacts && $('#view-contacts').classList.contains('active')) loadContacts();
     if ($('#view-settings').classList.contains('active')) loadSettingsView();

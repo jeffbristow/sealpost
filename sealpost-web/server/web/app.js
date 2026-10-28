@@ -24,17 +24,17 @@
  * settings.js, small shared helpers in ui.js.
  * ===================================================================== */
 
-import * as vault from './vault.js?v=1.11.1';
-import { Keyring } from './pgp.js?v=1.11.1';
-import { readMessage } from './reader.js?v=1.11.1';
-import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.11.1';
-import { initComposer } from './composer.js?v=1.11.1';
-import { initPeople } from './people.js?v=1.11.1';
-import { initTools } from './tools.js?v=1.11.1';
-import { initSettings } from './settings.js?v=1.11.1';
-import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.11.1';   // 1.6.0
-import { initUpdates } from './update.js?v=1.11.1';   // 1.10.0
-import { keyAddressFn } from './addy.js?v=1.11.1';   // 1.11.0
+import * as vault from './vault.js?v=1.11.2';
+import { Keyring } from './pgp.js?v=1.11.2';
+import { readMessage } from './reader.js?v=1.11.2';
+import { $, $$, esc, show, addr, addrShort, fmtDate, fmtSize, toast, loading, download, dialog, confirmBox, promptPassphrase, withPassphrase } from './ui.js?v=1.11.2';
+import { initComposer } from './composer.js?v=1.11.2';
+import { initPeople } from './people.js?v=1.11.2';
+import { initTools } from './tools.js?v=1.11.2';
+import { initSettings } from './settings.js?v=1.11.2';
+import { faceSupported, enableFace, pinFromFace, faceName } from './faceid.js?v=1.11.2';   // 1.6.0
+import { initUpdates } from './update.js?v=1.11.2';   // 1.10.0
+import { keyAddressFn } from './addy.js?v=1.11.2';   // 1.11.0
 
 /* =================================================================
  * 1. STATE + CONTEXT
@@ -104,6 +104,8 @@ const ctx = {
   switchView: v => switchView(v),
   openComposer: o => composer.openComposer(o),
   loadAccounts: () => loadAccounts(),                 // 1.4.0
+  moveAccount: (id, d) => moveAccount(id, d),         // 1.11.2
+  startChoices: () => startChoices(),                 // 1.11.2
   lookupKey: email => people.lookupDialog(email),     // 1.4.0
   importKeys: text => people.importKeys(text)         // 1.4.0
 };
@@ -484,7 +486,7 @@ async function loadAccounts() {
     return;
   }
   if (state.cur.accId === UNIFIED && accs.length < 2) state.cur.accId = null;   // 1.8.0
-  if (!state.cur.accId || (state.cur.accId !== UNIFIED && !account(state.cur.accId))) Object.assign(state.cur, { accId: accs[0].id, folder: 'INBOX' });
+  if (!state.cur.accId || (state.cur.accId !== UNIFIED && !account(state.cur.accId))) Object.assign(state.cur, await startTarget());   // 1.11.2
   renderTree();
   selectFolder(state.cur.accId, state.cur.folder);
   await Promise.all(accs.map(a => loadFolders(a.id)));
@@ -505,6 +507,57 @@ async function loadFolders(accId) {
     const f = curFolderInfo();
     if (f) $('#folderTitle').textContent = f.name;
   }
+}
+
+/* ---------- 1.11.2: your account order + the folder Sealpost opens at start ----------
+ * Both are synced settings (same as Sealpost on your PC): accountOrder =
+ * [account ids] (vault.js puts the accounts in that order), startFolder =
+ * { accId, path } with the readable path — accId UNIFIED for All Inboxes —
+ * or null for the first account's Inbox. */
+const startPref = () => (state.vault && state.vault.settings.startFolder) || null;
+const isStart = (accId, path) => { const sf = startPref(); return !!sf && sf.accId === accId && sf.path === path; };
+async function startTarget() {
+  const accs = state.vault.accounts, sf = startPref();
+  const first = { accId: accs[0].id, folder: 'INBOX' };
+  if (sf && sf.accId === UNIFIED && accs.length > 1) return { accId: UNIFIED, folder: 'INBOX' };
+  const a = sf && account(sf.accId);
+  if (!a) return first;
+  if (sf.path.toUpperCase() === 'INBOX') return { accId: a.id, folder: 'INBOX' };
+  if (!(state.folders[a.id] || []).length) await loadFolders(a.id);   // the saved path is the readable one: find the server's
+  const f = (state.folders[a.id] || []).find(x => upath(x) === sf.path && !x.noselect);
+  return f ? { accId: a.id, folder: f.path } : first;
+}
+async function saveSettingsPatch(patch) {
+  await saveToVault([{ id: 'settings:main', type: 'settings', data: { ...state.vault.settings, ...patch } }]);
+}
+async function setStartFolder(accId, path, name) {
+  try {
+    await saveSettingsPatch({ startFolder: accId ? { accId, path } : null });
+    toast(accId ? `Sealpost will open ${name} when it starts.` : 'Sealpost will open the first account\'s Inbox when it starts.');
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function moveAccount(accId, delta) {
+  const ids = state.vault.accounts.map(a => a.id), i = ids.indexOf(accId), j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  try { await saveSettingsPatch({ accountOrder: ids }); renderTree(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+const startMenuItem = (accId, path, name) => (isStart(accId, path)
+  ? { label: '🏠 Stop opening here at start', run: () => setStartFolder(null) }
+  : { label: '🏠 Open here when Sealpost starts', run: () => setStartFolder(accId, path, name) });
+/** For Settings: [{ value: { accId, path } | null, label, group }] */
+function startChoices() {
+  const accs = state.vault.accounts, sf = startPref();
+  const out = [{ value: null, label: 'The first account\'s Inbox', group: '' }];
+  if (accs.length > 1) out.push({ value: { accId: UNIFIED, path: 'INBOX' }, label: 'All Inboxes', group: '' });
+  for (const a of accs) {
+    const folders = (state.folders[a.id] || []).filter(f => !f.noselect);
+    if (!folders.length) folders.push({ path: 'INBOX', name: 'Inbox' });
+    for (const f of folders) out.push({ value: { accId: a.id, path: upath(f) }, label: '\u00a0'.repeat((f.depth || 0) * 3) + (f.path.toUpperCase() === 'INBOX' ? 'Inbox' : f.name), group: a.email });
+    if (sf && sf.accId === a.id && !out.some(c => c.value && c.value.accId === a.id && c.value.path === sf.path)) out.push({ value: { accId: a.id, path: sf.path }, label: sf.path, group: a.email });
+  }
+  return out;
 }
 
 const folderIcon = f => ({ '\\Inbox': '📥', '\\Sent': '📤', '\\Drafts': '📝', '\\Trash': '🗑', '\\Junk': '⚠', '\\Archive': '🗄', '\\Flagged': '⚑', '\\All': '📚' }[f.specialUse] || '📁');
@@ -533,20 +586,23 @@ function renderTree() {
       el.className = 'folder fav' + (onMail && isUnified() ? ' active' : '');
       el.innerHTML = `<span aria-hidden="true">📬</span><span class="name">All Inboxes</span>${unread ? `<span class="count">${unread}</span>` : ''}`;
       el.onclick = () => { switchView('mail'); selectFolder(UNIFIED, 'INBOX'); };
-      el.oncontextmenu = e => { e.preventDefault(); showMenu(e, [{ label: '✓ Mark all inboxes as read', run: () => markFolderRead(UNIFIED, 'INBOX') }]); };
+      el.oncontextmenu = e => { e.preventDefault(); showMenu(e, [{ label: '✓ Mark all inboxes as read', run: () => markFolderRead(UNIFIED, 'INBOX') }, startMenuItem(UNIFIED, 'INBOX', 'All Inboxes')]); };
       tree.appendChild(el);
     }
     for (const { a, f } of pins) tree.appendChild(folderRow(a, f, { pinned: true, multi }));
   }
 
-  for (const a of accs) {
+  accs.forEach((a, i) => {
     const lbl = document.createElement('div');
     lbl.className = 'acct-label';
     lbl.innerHTML = `<span class="acct-name">${esc(a.name ? `${a.name} · ${a.email}` : a.email)}</span><button type="button" class="acct-add" title="New folder">＋</button><button type="button" class="acct-more" title="Account options">⋯</button>`;
     lbl.title = a.email;
     const menu = e => { e.preventDefault(); e.stopPropagation(); showMenu(e, [
       { label: '＋ New folder…', run: () => newFolderDialog(a.id, null) },
-      { label: (a.conversationView ? '☑' : '☐') + ' Conversation view', run: () => setConversation(a.id, !a.conversationView) }
+      { label: (a.conversationView ? '☑' : '☐') + ' Conversation view', run: () => setConversation(a.id, !a.conversationView) },
+      ...(multi ? ['-',   // 1.11.2
+        ...(i > 0 ? [{ label: '▲ Move account up', run: () => moveAccount(a.id, -1) }] : []),
+        ...(i < accs.length - 1 ? [{ label: '▼ Move account down', run: () => moveAccount(a.id, 1) }] : [])] : [])
     ]); };
     lbl.querySelector('.acct-add').onclick = e => { e.stopPropagation(); newFolderDialog(a.id, null); };
     lbl.querySelector('.acct-more').onclick = menu;
@@ -558,7 +614,7 @@ function renderTree() {
       tree.appendChild(er);
     }
     for (const f of state.folders[a.id] || []) tree.appendChild(folderRow(a, f, {}));
-  }
+  });
   updateBadge();   // 1.5.0
 }
 
@@ -597,6 +653,7 @@ function folderMenuItems(a, f, inFavorites = false) {
   const items = [];
   if (!f.noselect) items.push({ label: '✓ Mark all as read', run: () => markFolderRead(a.id, f.path) }, '-');
   items.push({ label: pinned ? '📌 Unpin from top' : '📌 Pin to top', run: () => togglePin(a.id, upath(f)) });
+  if (!f.noselect) items.push(startMenuItem(a.id, upath(f), `"${f.name}"`));   // 1.11.2
   items.push({ label: '🎨 Choose icon…', run: () => folderIconDialog(a, f, inFavorites) });   // 1.11.1
   items.push({ label: '＋ New subfolder…', run: () => newFolderDialog(a.id, f.path) });
   if (!isSpecial(f)) {
@@ -683,6 +740,12 @@ async function fixPins(accId, from, to) {   // from / to: readable paths
   for (const [p, ic] of Object.entries(a.folderIcons || {})) { const q = moved(p); if (q != null) icons[q] = ic; }
   if (JSON.stringify(pins) !== JSON.stringify(a.pinnedFolders || []) || JSON.stringify(icons) !== JSON.stringify(a.folderIcons || {})) {
     await saveAccountPrefs(accId, { pinnedFolders: pins, folderIcons: icons });
+  }
+  // 1.11.2: so does the folder Sealpost opens at start
+  const sf = startPref();
+  if (sf && sf.accId === accId && sf.path) {
+    const q = moved(sf.path);
+    if (q !== sf.path) await saveSettingsPatch({ startFolder: q == null ? null : { accId, path: q } });
   }
 }
 
